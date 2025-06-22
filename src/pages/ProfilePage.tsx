@@ -7,7 +7,8 @@ import AnimatedCard from '../components/AnimatedCard';
 import ProfileCard from '../components/ProfileCard';
 import PageTransition from '../components/PageTransition';
 import ThemeToggle from '../components/ThemeToggle';
-import { useAuth, UserProfile } from '../lib/auth';
+import { useAuth } from '../hooks/useAuth';
+import { Profile as UserProfile } from '../lib/supabaseClient';
 import { supabase } from '../lib/supabaseClient';
 
 interface MatchHistoryEntry {

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Github, Mail, Calendar, Trophy, Target, TrendingUp, Settings, Link as LinkIcon } from 'lucide-react';
 import AnimatedButton from './AnimatedButton';
 import RatingDisplay from './RatingDisplay';
-import { UserProfile } from '../lib/auth';
+import { Profile as UserProfile } from '../lib/supabaseClient';
 import { getRatingTier } from '../lib/elo';
 
 interface ProfileCardProps {

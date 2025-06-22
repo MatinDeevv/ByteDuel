@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, AlertCircle } from 'lucide-react';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../store/authStore';
 import AuthModal from './AuthModal';
 import AnimatedButton from './AnimatedButton';
