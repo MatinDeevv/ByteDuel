@@ -48,11 +48,11 @@ interface RecentMatch {
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
   const { setShowAuthModal } = useAuthStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     // Simulate loading dashboard data
@@ -101,11 +101,14 @@ const DashboardPage: React.FC = () => {
       } catch (error) {
         toast.error('Failed to load dashboard data', 'Please refresh the page to try again');
       } finally {
-        setLoading(false);
+        setDataLoading(false);
       }
     };
 
-    loadDashboardData();
+    // Only load dashboard data if we have a profile
+    if (profile && !authLoading) {
+      loadDashboardData();
+    }
   }, []);
 
   const handleSignOut = async () => {
@@ -140,7 +143,8 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  if (!profile) {
+  // Show loading state while auth is loading or profile is being fetched
+  if (authLoading || !profile) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <motion.div
@@ -153,7 +157,9 @@ const DashboardPage: React.FC = () => {
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           />
-          <p className="text-gray-600 dark:text-gray-400">Loading your profile...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {authLoading ? 'Loading your profile...' : 'Setting up dashboard...'}
+          </p>
         </motion.div>
       </div>
     );
@@ -286,7 +292,7 @@ const DashboardPage: React.FC = () => {
           </motion.div>
 
           {/* Stats Grid */}
-          {loading ? (
+          {dataLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {[...Array(4)].map((_, i) => (
                 <AnimatedCard key={i} className="p-6">
@@ -358,7 +364,7 @@ const DashboardPage: React.FC = () => {
                   Recent Matches
                 </h3>
 
-                {loading ? (
+                {dataLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
                       <div key={i} className="animate-pulse flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">

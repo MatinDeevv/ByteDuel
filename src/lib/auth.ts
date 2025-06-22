@@ -211,15 +211,20 @@ export async function signOut(): Promise<void> {
  */
 export async function getCurrentUserWithProfile(): Promise<{ user: User; profile: UserProfile } | null> {
   if (!isSupabaseAvailable()) {
+    console.log('Supabase not available, returning null');
     return null;
   }
 
   // Get session from Supabase
   const { data: { session }, error } = await supabase.auth.getSession();
   
+  console.log('getCurrentUserWithProfile - session:', !!session, 'error:', error);
+  
   if (error || !session?.user) {
     // Try to restore from cookies
     const { accessToken, refreshToken } = getAuthTokens();
+    
+    console.log('No session, trying cookies - tokens available:', !!accessToken, !!refreshToken);
     
     if (accessToken && refreshToken) {
       try {
@@ -228,6 +233,7 @@ export async function getCurrentUserWithProfile(): Promise<{ user: User; profile
           refresh_token: refreshToken,
         });
 
+        console.log('Cookie restore result:', !!data.user, 'error:', sessionError);
         if (sessionError || !data.user) {
           clearAuthTokens();
           return null;
@@ -235,13 +241,17 @@ export async function getCurrentUserWithProfile(): Promise<{ user: User; profile
 
         // Get profile for restored session
         const profile = await getUserProfile(data.user.id);
+        console.log('Profile fetched for restored session:', !!profile);
+        
         if (!profile) {
           const newProfile = await createUserProfile(data.user);
+          console.log('Created new profile for restored session');
           return { user: data.user, profile: newProfile };
         }
 
         return { user: data.user, profile };
       } catch (error) {
+        console.error('Cookie restore failed:', error);
         clearAuthTokens();
         return null;
       }
@@ -252,8 +262,11 @@ export async function getCurrentUserWithProfile(): Promise<{ user: User; profile
 
   // Get profile for current session
   const profile = await getUserProfile(session.user.id);
+  console.log('Profile fetched for current session:', !!profile);
+  
   if (!profile) {
     const newProfile = await createUserProfile(session.user);
+    console.log('Created new profile for current session');
     return { user: session.user, profile: newProfile };
   }
 
@@ -417,7 +430,6 @@ export function useAuth() {
 
     const initializeAuth = async () => {
       try {
-        setLoading(true);
         
         // Check if Supabase is available
         if (!isSupabaseAvailable()) {
@@ -434,6 +446,9 @@ export function useAuth() {
         if (result) {
           setUser(result.user);
           setProfile(result.profile);
+        } else {
+          setUser(null);
+          setProfile(null);
         }
       } catch (initError) {
         console.error('Auth initialization error:', initError);
@@ -450,7 +465,10 @@ export function useAuth() {
     initializeAuth();
 
     // Listen for auth changes with onAuthStateChange
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    let subscription: any = null;
+    
+    if (isSupabaseAvailable()) {
+      const { data } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
 
@@ -493,11 +511,15 @@ export function useAuth() {
           }
         }
       }
-    );
+      );
+      subscription = data.subscription;
+    }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, [setUser, setProfile, setLoading, setError]);
 

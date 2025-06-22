@@ -29,7 +29,7 @@ export const useAuthStore = create<AuthState>()(
     // Initial state
     user: null,
     profile: null,
-    loading: true,
+    loading: false,
     error: null,
     showAuthModal: false,
     authModalMode: 'signin',
