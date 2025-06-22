@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase, isSupabaseAvailable } from '../lib/supabaseClient';
 import { generatePuzzle } from '../lib/puzzleGenerator';
 import { runCodeSandbox } from '../lib/sandboxRunner';
 import { computeDeltas, applyRatingChange } from '../lib/elo';
@@ -44,6 +44,12 @@ export interface SubmitPracticeResponse {
 
 export async function createDuel(profileFingerprint: string, mode: GameMode = 'ranked-duel'): Promise<CreateDuelResponse> {
   try {
+    // Check if Supabase is available
+    if (!isSupabaseAvailable()) {
+      console.warn('Database not available, using mock data');
+      return getMockDuelData();
+    }
+
     // Generate puzzle based on profile fingerprint
     const puzzle = await generatePuzzle(profileFingerprint, '', mode);
     
@@ -70,10 +76,14 @@ export async function createDuel(profileFingerprint: string, mode: GameMode = 'r
     };
   } catch (error) {
     console.error('Error creating duel:', error);
-    // Return mock data for development
-    return {
-      duelId: `duel-${Date.now()}`,
-      prompt: `Write a function that finds the two numbers in an array that add up to a target sum.
+    return getMockDuelData();
+  }
+}
+
+function getMockDuelData(): CreateDuelResponse {
+  return {
+    duelId: `duel-${Date.now()}`,
+    prompt: `Write a function that finds the two numbers in an array that add up to a target sum.
 
 Given an array of integers and a target sum, return the indices of the two numbers that add up to the target.
 
@@ -82,17 +92,21 @@ You may assume that each input would have exactly one solution, and you may not 
 Example:
 Input: nums = [2, 7, 11, 15], target = 9
 Output: [0, 1] (because nums[0] + nums[1] = 2 + 7 = 9)`,
-      tests: [
-        { input: '[2, 7, 11, 15], 9', expected: '[0, 1]' },
-        { input: '[3, 2, 4], 6', expected: '[1, 2]' },
-        { input: '[3, 3], 6', expected: '[0, 1]' },
-      ],
-    };
-  }
+    tests: [
+      { input: '[2, 7, 11, 15], 9', expected: '[0, 1]' },
+      { input: '[3, 2, 4], 6', expected: '[1, 2]' },
+      { input: '[3, 3], 6', expected: '[0, 1]' },
+    ],
+  };
 }
 
 export async function joinDuel(duelId: string): Promise<JoinDuelResponse> {
   try {
+    if (!isSupabaseAvailable()) {
+      console.warn('Database not available, using mock data');
+      return getMockJoinData();
+    }
+
     const { data, error } = await supabase
       .from('duels')
       .select('*')
@@ -108,9 +122,13 @@ export async function joinDuel(duelId: string): Promise<JoinDuelResponse> {
     };
   } catch (error) {
     console.error('Error joining duel:', error);
-    // Return mock data for development
-    return {
-      prompt: `Write a function that finds the two numbers in an array that add up to a target sum.
+    return getMockJoinData();
+  }
+}
+
+function getMockJoinData(): JoinDuelResponse {
+  return {
+    prompt: `Write a function that finds the two numbers in an array that add up to a target sum.
 
 Given an array of integers and a target sum, return the indices of the two numbers that add up to the target.
 
@@ -119,18 +137,25 @@ You may assume that each input would have exactly one solution, and you may not 
 Example:
 Input: nums = [2, 7, 11, 15], target = 9
 Output: [0, 1] (because nums[0] + nums[1] = 2 + 7 = 9)`,
-      tests: [
-        { input: '[2, 7, 11, 15], 9', expected: '[0, 1]' },
-        { input: '[3, 2, 4], 6', expected: '[1, 2]' },
-        { input: '[3, 3], 6', expected: '[0, 1]' },
-      ],
-      timeLimit: 900,
-    };
-  }
+    tests: [
+      { input: '[2, 7, 11, 15], 9', expected: '[0, 1]' },
+      { input: '[3, 2, 4], 6', expected: '[1, 2]' },
+      { input: '[3, 3], 6', expected: '[0, 1]' },
+    ],
+    timeLimit: 900,
+  };
 }
 
 export async function submitDuel(duelId: string, code: string): Promise<SubmitDuelResponse> {
   try {
+    if (!isSupabaseAvailable()) {
+      console.warn('Database not available, using mock submission result');
+      const result = await runCodeSandbox(code, getMockJoinData().tests);
+      return {
+        ...result,
+      };
+    }
+
     // Get current user
     const currentUser = await getCurrentUser();
     const currentUserId = currentUser?.id || 'anonymous';
@@ -249,13 +274,9 @@ export async function submitDuel(duelId: string, code: string): Promise<SubmitDu
     };
   } catch (error) {
     console.error('Error submitting duel:', error);
-    // Return mock result for development
-    return {
-      passed: true,
-      passedTests: 3,
-      totalTests: 3,
-      runtimeMs: 45,
-    };
+    // Run code sandbox even if database fails
+    const result = await runCodeSandbox(code, getMockJoinData().tests);
+    return result;
   }
 }
 
@@ -265,6 +286,11 @@ export async function startPractice(
   mode: PracticeMode
 ): Promise<StartPracticeResponse> {
   try {
+    if (!isSupabaseAvailable()) {
+      console.warn('Database not available, using mock practice data');
+      return getMockPracticeData();
+    }
+
     // Get current user
     const currentUser = await getCurrentUser();
     const currentUserId = currentUser?.id || 'anonymous';
@@ -299,10 +325,14 @@ export async function startPractice(
     };
   } catch (error) {
     console.error('Error starting practice:', error);
-    // Return mock data for development
-    return {
-      sessionId: `practice-${Date.now()}`,
-      prompt: `Find the maximum sum of a contiguous subarray.
+    return getMockPracticeData();
+  }
+}
+
+function getMockPracticeData(): StartPracticeResponse {
+  return {
+    sessionId: `practice-${Date.now()}`,
+    prompt: `Find the maximum sum of a contiguous subarray.
 
 Given an integer array nums, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum.
 
@@ -310,22 +340,36 @@ Example:
 Input: nums = [-2,1,-3,4,-1,2,1,-5,4]
 Output: 6
 Explanation: [4,-1,2,1] has the largest sum = 6.`,
-      tests: [
-        { input: '[-2,1,-3,4,-1,2,1,-5,4]', expected: '6' },
-        { input: '[1]', expected: '1' },
-        { input: '[5,4,-1,7,8]', expected: '23' },
-      ],
-      hints: [
-        'Think about dynamic programming - what\'s the maximum sum ending at each position?',
-        'Consider Kadane\'s algorithm for an efficient O(n) solution.',
-        'At each step, decide whether to extend the current subarray or start a new one.',
-      ],
-    };
-  }
+    tests: [
+      { input: '[-2,1,-3,4,-1,2,1,-5,4]', expected: '6' },
+      { input: '[1]', expected: '1' },
+      { input: '[5,4,-1,7,8]', expected: '23' },
+    ],
+    hints: [
+      'Think about dynamic programming - what\'s the maximum sum ending at each position?',
+      'Consider Kadane\'s algorithm for an efficient O(n) solution.',
+      'At each step, decide whether to extend the current subarray or start a new one.',
+    ],
+  };
 }
 
 export async function submitPractice(sessionId: string, code: string): Promise<SubmitPracticeResponse> {
   try {
+    if (!isSupabaseAvailable()) {
+      console.warn('Database not available, using mock practice result');
+      const result = await runCodeSandbox(code, getMockPracticeData().tests);
+      const score = Math.round((result.passedTests / result.totalTests) * 100);
+      return {
+        passed: result.passed,
+        passedTests: result.passedTests,
+        totalTests: result.totalTests,
+        score,
+        feedback: result.passed 
+          ? 'Excellent work! All tests passed.' 
+          : `Good effort! ${result.passedTests}/${result.totalTests} tests passed. Keep practicing!`,
+      };
+    }
+
     // Get practice session data
     const { data: session, error: sessionError } = await supabase
       .from('practice_sessions')
@@ -363,13 +407,17 @@ export async function submitPractice(sessionId: string, code: string): Promise<S
     };
   } catch (error) {
     console.error('Error submitting practice:', error);
-    // Return mock result for development
+    // Run code sandbox even if database fails
+    const result = await runCodeSandbox(code, getMockPracticeData().tests);
+    const score = Math.round((result.passedTests / result.totalTests) * 100);
     return {
-      passed: true,
-      passedTests: 3,
-      totalTests: 3,
-      score: 100,
-      feedback: 'Great job! All tests passed. You\'re getting better!',
+      passed: result.passed,
+      passedTests: result.passedTests,
+      totalTests: result.totalTests,
+      score,
+      feedback: result.passed 
+        ? 'Excellent work! All tests passed.' 
+        : `Good effort! ${result.passedTests}/${result.totalTests} tests passed. Keep practicing!`,
     };
   }
 }

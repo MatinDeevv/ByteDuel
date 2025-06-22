@@ -1,14 +1,45 @@
 import { createClient } from '@supabase/supabase-js';
 import { GameMode, PracticeMode, Difficulty } from '../types';
 
+// Get environment variables with fallbacks
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// Validate required environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
+  console.error('Missing Supabase configuration. Please check your environment variables:');
+  console.error('VITE_SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing');
+  console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Set' : 'Missing');
+  
+  // In development, show a helpful error
+  if (import.meta.env.DEV) {
+    throw new Error('Supabase configuration missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
+  }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client with error handling
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : null;
+
+// Helper function to check if Supabase is available
+export function isSupabaseAvailable(): boolean {
+  return supabase !== null;
+}
+
+// Helper function to get Supabase client with error handling
+export function getSupabaseClient() {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Please check your environment variables.');
+  }
+  return supabase;
+}
 
 // Database type definitions
 export interface User {

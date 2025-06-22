@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import Cookies from 'js-cookie';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseAvailable } from './supabaseClient';
 import { User } from '@supabase/supabase-js';
 
 export interface UserProfile {
@@ -94,6 +94,10 @@ export function clearUrlFragment(): void {
  * Sign in with GitHub OAuth
  */
 export async function signInWithGitHub(): Promise<void> {
+  if (!isSupabaseAvailable()) {
+    throw new Error('Authentication service is not available. Please check configuration.');
+  }
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: {
@@ -111,6 +115,10 @@ export async function signInWithGitHub(): Promise<void> {
  * Sign in with email and password
  */
 export async function signInWithEmail(email: string, password: string): Promise<void> {
+  if (!isSupabaseAvailable()) {
+    throw new Error('Authentication service is not available. Please check configuration.');
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -134,6 +142,10 @@ export async function signUpWithEmail(
   password: string, 
   displayName: string
 ): Promise<void> {
+  if (!isSupabaseAvailable()) {
+    throw new Error('Authentication service is not available. Please check configuration.');
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -163,11 +175,13 @@ export async function signUpWithEmail(
  * Sign out current user
  */
 export async function signOut(): Promise<void> {
-  const { error } = await supabase.auth.signOut();
   clearAuthTokens();
   
-  if (error) {
-    throw new Error(`Sign-out failed: ${error.message}`);
+  if (isSupabaseAvailable()) {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw new Error(`Sign-out failed: ${error.message}`);
+    }
   }
 }
 
@@ -175,6 +189,10 @@ export async function signOut(): Promise<void> {
  * Get current user session
  */
 export async function getCurrentUser(): Promise<User | null> {
+  if (!isSupabaseAvailable()) {
+    return null;
+  }
+
   // Try to get session from Supabase first
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -211,6 +229,10 @@ export async function getCurrentUser(): Promise<User | null> {
  * Get user profile from database
  */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  if (!isSupabaseAvailable()) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('users')
     .select('*')
@@ -232,6 +254,10 @@ export async function createUserProfile(
   user: User, 
   additionalData: Partial<UserProfile> = {}
 ): Promise<UserProfile> {
+  if (!isSupabaseAvailable()) {
+    throw new Error('Database service is not available. Please check configuration.');
+  }
+
   // Extract GitHub data if available
   const githubData = user.user_metadata;
   
@@ -269,6 +295,10 @@ export async function updateUserProfile(
   userId: string, 
   updates: Partial<UserProfile>
 ): Promise<UserProfile> {
+  if (!isSupabaseAvailable()) {
+    throw new Error('Database service is not available. Please check configuration.');
+  }
+
   const { data, error } = await supabase
     .from('users')
     .update({
@@ -329,8 +359,16 @@ export function useAuth() {
   const [user, setUser] = React.useState<User | null>(null);
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    // Check if Supabase is available
+    if (!isSupabaseAvailable()) {
+      setError('Authentication service is not configured properly.');
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     getCurrentUser().then((currentUser) => {
       setUser(currentUser);
@@ -374,6 +412,7 @@ export function useAuth() {
     user,
     profile,
     loading,
+    error,
     signInWithGitHub,
     signInWithEmail,
     signUpWithEmail,

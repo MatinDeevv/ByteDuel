@@ -1,7 +1,7 @@
 /**
  * Matchmaking Service - Handle queue management and opponent pairing
  */
-import { supabase } from '../lib/supabaseClient';
+import { supabase, isSupabaseAvailable } from '../lib/supabaseClient';
 
 export interface QueueEntry {
   user_id: string;
@@ -19,6 +19,10 @@ export interface MatchFound {
  * Add user to matchmaking queue
  */
 export async function enqueueUser(userId: string, mode: string = 'ranked'): Promise<void> {
+  if (!isSupabaseAvailable()) {
+    throw new Error('Matchmaking service is not available. Please check configuration.');
+  }
+
   const { error } = await supabase
     .from('matchmaking_queue')
     .upsert({ 
@@ -37,6 +41,10 @@ export async function enqueueUser(userId: string, mode: string = 'ranked'): Prom
  * Remove user from matchmaking queue
  */
 export async function dequeueUser(userId: string): Promise<void> {
+  if (!isSupabaseAvailable()) {
+    return; // Silently fail if service not available
+  }
+
   const { error } = await supabase
     .from('matchmaking_queue')
     .delete()
@@ -52,6 +60,10 @@ export async function dequeueUser(userId: string): Promise<void> {
  * Get current queue status for user
  */
 export async function getQueueStatus(userId: string): Promise<QueueEntry | null> {
+  if (!isSupabaseAvailable()) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('matchmaking_queue')
     .select('*')
@@ -70,6 +82,10 @@ export async function getQueueStatus(userId: string): Promise<QueueEntry | null>
  * Find and create matches from queue (background service)
  */
 export async function processMatchmaking(): Promise<void> {
+  if (!isSupabaseAvailable()) {
+    return;
+  }
+
   try {
     // Get oldest two players in ranked queue
     const { data: queueEntries, error } = await supabase
@@ -122,6 +138,11 @@ export function subscribeToMatches(
   onMatch: (match: MatchFound) => void,
   onError?: (error: Error) => void
 ): () => void {
+  if (!isSupabaseAvailable()) {
+    onError?.(new Error('Matchmaking service is not available'));
+    return () => {}; // Return empty unsubscribe function
+  }
+
   // Subscribe to duels table for new matches involving this user
   const subscription = supabase
     .channel('matchmaking')
