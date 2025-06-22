@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/auth/callback",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/callback/:rest*",
+      "destination": "/index.html"
+    }
+  ]
+}
