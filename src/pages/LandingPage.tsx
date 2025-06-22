@@ -19,7 +19,7 @@ const LandingPage: React.FC = () => {
   const [githubProfile, setGithubProfile] = useState('');
   const [selectedMode, setSelectedMode] = useState<GameMode>('ranked-duel');
   const [showMatchmaking, setShowMatchmaking] = useState(false);
-  const { user, profile, signOut, signInWithGitHub } = useAuth();
+  const { user, profile, signOut, signInWithGitHub, diagnoseAuth } = useAuth();
 
   // Mock leaderboard data
   const leaderboardData = [
@@ -52,6 +52,11 @@ const LandingPage: React.FC = () => {
       // For other modes, redirect to dashboard for now
       navigate('/dashboard');
     }
+  };
+
+  // Add diagnostic button for debugging
+  const handleDiagnose = async () => {
+    await diagnoseAuth();
   };
 
   return (
@@ -92,6 +97,13 @@ const LandingPage: React.FC = () => {
             <ThemeToggle />
             {user ? (
               <div className="flex items-center space-x-4">
+                <AnimatedButton
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDiagnose}
+                >
+                  Debug Auth
+                </AnimatedButton>
                 <AnimatedButton
                   variant="outline"
                   size="sm"
