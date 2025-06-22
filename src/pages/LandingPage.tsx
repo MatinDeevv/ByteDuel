@@ -19,7 +19,7 @@ const LandingPage: React.FC = () => {
   const [githubProfile, setGithubProfile] = useState('');
   const [selectedMode, setSelectedMode] = useState<GameMode>('ranked-duel');
   const [showMatchmaking, setShowMatchmaking] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, signInWithGitHub } = useAuth();
 
   // Mock leaderboard data
   const leaderboardData = [
