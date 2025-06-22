@@ -129,11 +129,11 @@ export async function getCurrentUserWithProfile(): Promise<AuthResult | null> {
 /**
  * Get user profile by auth user ID
  */
-export async function getUserProfile(authUserId: string): Promise<Profile | null> {
+export async function getUserProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('users')
     .select('*')
-    .eq('auth_user_id', authUserId)
+    .eq('id', userId)
     .single();
 
   if (error) {
@@ -151,13 +151,19 @@ export async function getUserProfile(authUserId: string): Promise<Profile | null
  * Get or create profile for user
  */
 export async function getOrCreateProfile(user: User): Promise<Profile> {
-  let profile = await getUserProfile(user.id);
+  // First try to get existing profile by auth_user_id
+  const { data: existingProfile, error: getError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
   
-  if (!profile) {
-    profile = await createProfile(user);
+  if (!getError && existingProfile) {
+    return existingProfile;
   }
 
-  return profile;
+  // If no profile exists, create one
+  return await createProfile(user);
 }
 
 /**
@@ -167,27 +173,27 @@ export async function createProfile(
   user: User,
   additionalData: Partial<Profile> = {}
 ): Promise<Profile> {
-  const githubData = user.user_metadata;
+  const githubData = user.user_metadata || {};
   
   const profileData = {
-    auth_user_id: user.id,
+    id: user.id, // Use auth user ID as primary key
     email: user.email,
     display_name: additionalData.display_name || 
                   githubData?.full_name || 
                   githubData?.name || 
                   githubData?.user_name || 
-                  'Anonymous User',
+                  user.email?.split('@')[0] ||
+                  'User',
     github_username: githubData?.user_name,
-    github_id: githubData?.provider_id,
     avatar_url: githubData?.avatar_url,
-    bio: githubData?.bio,
-    skill_level: additionalData.skill_level || 'beginner',
-    preferred_languages: additionalData.preferred_languages || ['javascript'],
+    skill_level: 'beginner',
+    elo_rating: 1200,
+    rating: 1200,
     ...additionalData,
   };
 
   const { data, error } = await supabase
-    .from('profiles')
+    .from('users')
     .insert(profileData)
     .select()
     .single();
@@ -207,10 +213,9 @@ export async function updateProfile(
   updates: Partial<Profile>
 ): Promise<Profile> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('users')
     .update({
       ...updates,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', profileId)
     .select()
@@ -266,7 +271,7 @@ export async function syncWithGitHub(profileId: string, githubUsername: string):
 export async function deleteAccount(profileId: string): Promise<void> {
   // Delete profile (cascades to other tables)
   const { error } = await supabase
-    .from('profiles')
+    .from('users')
     .delete()
     .eq('id', profileId);
 
@@ -283,7 +288,7 @@ export async function deleteAccount(profileId: string): Promise<void> {
  */
 export async function isUsernameAvailable(username: string): Promise<boolean> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('users')
     .select('id')
     .eq('github_username', username)
     .single();
@@ -301,11 +306,10 @@ export async function isUsernameAvailable(username: string): Promise<boolean> {
  */
 export async function searchProfiles(query: string, limit = 10): Promise<Profile[]> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('users')
     .select('*')
     .or(`display_name.ilike.%${query}%,github_username.ilike.%${query}%`)
-    .eq('is_active', true)
-    .order('elo_rating', { ascending: false })
+    .order('rating', { ascending: false })
     .limit(limit);
 
   if (error) {

@@ -3,23 +3,44 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabaseClient';
 
 const AuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    // Wait for auth to initialize
-    if (!loading) {
-      if (user) {
-        // User is authenticated, redirect to dashboard
-        navigate('/dashboard', { replace: true });
-      } else {
-        // No user found, redirect to login
+    const handleAuthCallback = async () => {
+      try {
+        // Handle the auth callback
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Auth callback error:', error);
+          navigate('/login', { replace: true });
+          return;
+        }
+        
+        if (data.session?.user) {
+          console.log('Auth callback successful, user:', data.session.user.id);
+          
+          // Small delay to ensure profile creation completes
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+          }, 1000);
+        } else {
+          console.log('No session found, redirecting to login');
+          navigate('/login', { replace: true });
+        }
+      } catch (error) {
+        console.error('Auth callback error:', error);
         navigate('/login', { replace: true });
       }
-    }
-  }, [user, loading, navigate]);
+    };
+
+    // Only run once when component mounts
+    handleAuthCallback();
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">

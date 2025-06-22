@@ -99,18 +99,27 @@ const DashboardPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
+          {dataLoading && (
+            <motion.div
+              className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            />
+          )}
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Authentication Required
+            {dataLoading ? 'Loading Dashboard...' : 'Authentication Required'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Please sign in to access your dashboard.
+            {dataLoading ? 'Setting up your profile...' : 'Please sign in to access your dashboard.'}
           </p>
-          <AnimatedButton
-            onClick={() => navigate('/login')}
-            variant="primary"
-          >
-            Sign In
-          </AnimatedButton>
+          {!dataLoading && (
+            <AnimatedButton
+              onClick={() => navigate('/login')}
+              variant="primary"
+            >
+              Sign In
+            </AnimatedButton>
+          )}
         </motion.div>
       </div>
     );
@@ -237,11 +246,11 @@ const DashboardPage: React.FC = () => {
                   </AnimatedButton>
                   <AnimatedButton
                     onClick={() => navigate('/practice')}
-                    variant="outline"
+                  <span>{profile?.games_won || 0} wins</span>
                   >
                     <BookOpen className="h-4 w-4 mr-2" />
                     Practice
-                  </AnimatedButton>
+                  <span>{(profile?.games_played || 0) - (profile?.games_won || 0)} losses</span>
                 </div>
               </div>
             </AnimatedCard>
@@ -271,7 +280,7 @@ const DashboardPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Win Rate</p>
                     <p className="text-2xl font-bold text-green-500">
-                      {profile.total_matches > 0 ? Math.round((profile.wins / profile.total_matches) * 100) : 0}%
+                      {profile.games_played > 0 ? Math.round((profile.games_won / profile.games_played) * 100) : 0}%
                     </p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-green-500" />
@@ -282,7 +291,7 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Streak</p>
-                    <p className="text-2xl font-bold text-blue-500">{profile.current_streak}</p>
+                    <p className="text-2xl font-bold text-blue-500">0</p>
                   </div>
                   <Zap className="h-8 w-8 text-blue-500" />
                 </div>
@@ -304,7 +313,7 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Matches</p>
-                    <p className="text-2xl font-bold text-orange-500">{profile.total_matches}</p>
+                    <p className="text-2xl font-bold text-orange-500">{profile.games_played}</p>
                   </div>
                   <Users className="h-8 w-8 text-orange-500" />
                 </div>

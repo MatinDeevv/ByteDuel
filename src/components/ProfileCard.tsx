@@ -23,9 +23,6 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   const tier = getRatingTier(profile.rating);
-  const winRate = profile.wins + profile.losses > 0 
-    ? ((profile.wins / (profile.wins + profile.losses)) * 100).toFixed(1)
-    : '0.0';
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -133,7 +130,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
             <div className="flex items-center justify-center mb-1">
               <Trophy className="h-4 w-4 text-yellow-500 mr-1" />
               <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {profile.wins}
+                {profile.games_won}
               </span>
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400">Wins</p>
@@ -146,7 +143,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
             <div className="flex items-center justify-center mb-1">
               <Target className="h-4 w-4 text-red-500 mr-1" />
               <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {profile.losses}
+                {profile.games_played - profile.games_won}
               </span>
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400">Losses</p>
@@ -159,7 +156,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
             <div className="flex items-center justify-center mb-1">
               <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
               <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {winRate}%
+                {profile.games_played > 0 ? Math.round((profile.games_won / profile.games_played) * 100) : 0}%
               </span>
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400">Win Rate</p>

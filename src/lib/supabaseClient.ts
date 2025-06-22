@@ -36,128 +36,39 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export interface Database {
   public: {
     Tables: {
-      profiles: {
+      users: {
         Row: {
           id: string;
-          auth_user_id: string | null;
-          email: string | null;
-          display_name: string;
           github_username: string | null;
-          github_id: string | null;
-          avatar_url: string | null;
-          bio: string | null;
+          display_name: string;
           skill_level: 'beginner' | 'intermediate' | 'advanced';
           elo_rating: number;
-          wins: number;
-          losses: number;
-          draws: number;
-          total_matches: number;
-          current_streak: number;
-          best_streak: number;
-          preferred_languages: string[];
-          timezone: string;
-          is_active: boolean;
-          last_active: string;
+          games_played: number;
+          games_won: number;
           created_at: string;
-          updated_at: string;
+          rating: number;
         };
         Insert: {
           id?: string;
-          auth_user_id?: string | null;
-          email?: string | null;
+          github_username?: string | null;
           display_name: string;
-          github_username?: string | null;
-          github_id?: string | null;
-          avatar_url?: string | null;
-          bio?: string | null;
           skill_level?: 'beginner' | 'intermediate' | 'advanced';
           elo_rating?: number;
-          wins?: number;
-          losses?: number;
-          draws?: number;
-          total_matches?: number;
-          current_streak?: number;
-          best_streak?: number;
-          preferred_languages?: string[];
-          timezone?: string;
-          is_active?: boolean;
-          last_active?: string;
+          games_played?: number;
+          games_won?: number;
           created_at?: string;
-          updated_at?: string;
+          rating?: number;
         };
         Update: {
           id?: string;
-          auth_user_id?: string | null;
-          email?: string | null;
-          display_name?: string;
           github_username?: string | null;
-          github_id?: string | null;
-          avatar_url?: string | null;
-          bio?: string | null;
+          display_name?: string;
           skill_level?: 'beginner' | 'intermediate' | 'advanced';
           elo_rating?: number;
-          wins?: number;
-          losses?: number;
-          draws?: number;
-          total_matches?: number;
-          current_streak?: number;
-          best_streak?: number;
-          preferred_languages?: string[];
-          timezone?: string;
-          is_active?: boolean;
-          last_active?: string;
+          games_played?: number;
+          games_won?: number;
           created_at?: string;
-          updated_at?: string;
-        };
-      };
-      user_stats: {
-        Row: {
-          user_id: string;
-          total_practice_sessions: number;
-          total_code_submissions: number;
-          average_solve_time: number | null;
-          fastest_solve_time: number | null;
-          slowest_solve_time: number | null;
-          favorite_topics: string[];
-          difficulty_distribution: any;
-          monthly_activity: any;
-          performance_trend: any;
-          achievements: string[];
-          total_hints_used: number;
-          perfect_solutions: number;
-          updated_at: string;
-        };
-        Insert: {
-          user_id: string;
-          total_practice_sessions?: number;
-          total_code_submissions?: number;
-          average_solve_time?: number | null;
-          fastest_solve_time?: number | null;
-          slowest_solve_time?: number | null;
-          favorite_topics?: string[];
-          difficulty_distribution?: any;
-          monthly_activity?: any;
-          performance_trend?: any;
-          achievements?: string[];
-          total_hints_used?: number;
-          perfect_solutions?: number;
-          updated_at?: string;
-        };
-        Update: {
-          user_id?: string;
-          total_practice_sessions?: number;
-          total_code_submissions?: number;
-          average_solve_time?: number | null;
-          fastest_solve_time?: number | null;
-          slowest_solve_time?: number | null;
-          favorite_topics?: string[];
-          difficulty_distribution?: any;
-          monthly_activity?: any;
-          performance_trend?: any;
-          achievements?: string[];
-          total_hints_used?: number;
-          perfect_solutions?: number;
-          updated_at?: string;
+          rating?: number;
         };
       };
       duels: {
@@ -452,13 +363,11 @@ export interface Database {
 }
 
 // Type helpers
-export type Profile = Database['public']['Tables']['profiles']['Row'];
-export type UserStats = Database['public']['Tables']['user_stats']['Row'];
+export type Profile = Database['public']['Tables']['users']['Row'];
 export type Duel = Database['public']['Tables']['duels']['Row'];
 export type Submission = Database['public']['Tables']['submissions']['Row'];
 export type PracticeSession = Database['public']['Tables']['practice_sessions']['Row'];
 export type MatchHistory = Database['public']['Tables']['match_history']['Row'];
-export type LeaderboardEntry = Database['public']['Tables']['leaderboards']['Row'];
 
 // Utility functions
 export const isSupabaseConfigured = () => {

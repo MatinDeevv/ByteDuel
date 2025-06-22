@@ -58,7 +58,7 @@ export function useAuth(): AuthState & AuthActions {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
+        console.log('Auth state change:', event, !!session?.user);
         
         // Invalidate auth query to refetch
         queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
@@ -66,6 +66,15 @@ export function useAuth(): AuthState & AuthActions {
         // Clear any existing errors on successful auth
         if (session?.user) {
           setError(null);
+          
+          // For SIGNED_IN events, ensure profile exists
+          if (event === 'SIGNED_IN') {
+            try {
+              await getCurrentUserWithProfile();
+            } catch (error) {
+              console.error('Failed to get/create profile:', error);
+            }
+          }
         }
       }
     );
