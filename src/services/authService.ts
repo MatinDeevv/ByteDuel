@@ -124,7 +124,7 @@ export async function getCurrentUserWithProfile(): Promise<AuthResult | null> {
   }
 
   console.log('Getting profile for user:', user.id);
-  const profile = await getOrCreateProfile(user);
+  const profile = await getOrCreateProfileDirect(user);
   console.log('Profile result:', !!profile);
   return { user, profile };
 }
@@ -153,7 +153,7 @@ export async function getUserProfile(userId: string): Promise<Profile | null> {
 /**
  * Get or create profile for user
  */
-export async function getOrCreateProfile(user: User): Promise<Profile> {
+export async function getOrCreateProfileDirect(user: User): Promise<Profile> {
   // First try to get existing profile by auth_user_id
   console.log('Looking for existing profile for user:', user.id);
   const { data: existingProfile, error: getError } = await supabase
@@ -169,6 +169,22 @@ export async function getOrCreateProfile(user: User): Promise<Profile> {
 
   console.log('No existing profile found, creating new one...');
   // If no profile exists, create one
+  return await createProfileDirect(user);
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
+export async function getOrCreateProfile(user: User): Promise<Profile> {
+  return await getOrCreateProfileDirect(user);
+}
+
+/**
+ * Create user profile directly without relying on triggers
+ */
+export async function createProfileDirect(
+  user: User
+): Promise<Profile> {
   return await createProfile(user);
 }
 
@@ -184,13 +200,13 @@ export async function createProfile(
   
   const profileData = {
     id: user.id, // Use auth user ID as primary key
+    github_username: githubData?.user_name || null,
     display_name: additionalData.display_name || 
                   githubData?.full_name || 
                   githubData?.name || 
                   githubData?.user_name || 
                   user.email?.split('@')[0] ||
                   'User',
-    github_username: githubData?.user_name,
     skill_level: 'beginner',
     elo_rating: 1200,
     rating: 1200,
@@ -201,9 +217,10 @@ export async function createProfile(
 
   console.log('Inserting profile data:', profileData);
 
+  // Use upsert to handle potential race conditions
   const { data, error } = await supabase
     .from('users')
-    .insert(profileData)
+    .upsert(profileData, { onConflict: 'id' })
     .select()
     .single();
 

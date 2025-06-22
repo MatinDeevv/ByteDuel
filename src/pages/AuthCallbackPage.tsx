@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
+import { getCurrentUserWithProfile } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabaseClient';
 
@@ -13,25 +14,34 @@ const AuthCallbackPage: React.FC = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle the auth callback
-        const { data, error } = await supabase.auth.getSession();
+        console.log('Starting auth callback handling...');
         
-        if (error) {
-          console.error('Auth callback error:', error);
+        // Get the current session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
           navigate('/login', { replace: true });
           return;
         }
         
-        if (data.session?.user) {
-          console.log('Auth callback successful, user:', data.session.user.id);
+        if (sessionData.session?.user) {
+          console.log('Session found, user:', sessionData.session.user.id);
           
-          // Wait for profile creation to complete
-          setTimeout(() => {
+          // Ensure profile exists
+          console.log('Creating/getting profile...');
+          const authResult = await getCurrentUserWithProfile();
+          
+          if (authResult?.profile) {
+            console.log('Profile ready:', authResult.profile.display_name);
             setIsProcessing(false);
             navigate('/dashboard', { replace: true });
-          }, 2000);
+          } else {
+            console.error('Failed to create profile');
+            navigate('/login', { replace: true });
+          }
         } else {
-          console.log('No session found, redirecting to login');
+          console.log('No session found');
           setIsProcessing(false);
           navigate('/login', { replace: true });
         }

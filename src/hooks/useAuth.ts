@@ -68,21 +68,6 @@ export function useAuth(): AuthState & AuthActions {
         // Clear any existing errors on successful auth
         if (session?.user) {
           setError(null);
-          
-          // For SIGNED_IN events, ensure profile exists
-          if (event === 'SIGNED_IN') {
-            console.log('SIGNED_IN event, ensuring profile exists...');
-            try {
-              const result = await getCurrentUserWithProfile();
-              console.log('Profile check result:', !!result?.profile);
-              setProfileCreated(true);
-            } catch (error) {
-              console.error('Failed to get/create profile:', error);
-              setError('Failed to set up profile');
-            }
-          }
-        } else {
-          setProfileCreated(false);
         }
       }
     );
@@ -103,7 +88,7 @@ export function useAuth(): AuthState & AuthActions {
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authSignInWithEmail(email, password),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
       setError(null);
     },
     onError: (error: Error) => {
@@ -119,7 +104,7 @@ export function useAuth(): AuthState & AuthActions {
       displayName: string; 
     }) => authSignUpWithEmail(email, password, displayName),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
       setError(null);
     },
     onError: (error: Error) => {
@@ -188,7 +173,7 @@ export function useAuth(): AuthState & AuthActions {
   return {
     user: authData?.user || null,
     profile: authData?.profile || null,
-    loading: (loading && !profileCreated) || 
+    loading: loading || 
              signInWithEmailMutation.isPending || 
              signUpWithEmailMutation.isPending || 
              signOutMutation.isPending,
