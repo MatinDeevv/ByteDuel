@@ -22,7 +22,38 @@ const LandingPage: React.FC = () => {
   const [selectedMode, setSelectedMode] = useState<GameMode>('ranked-duel');
   const [showMatchmaking, setShowMatchmaking] = useState(false);
   const { setUserId, userRating } = useMatchmakingStore();
-  const { user, profile, signOut, error } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (user && profile && !loading) {
+      console.log('User authenticated, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, profile, loading, navigate]);
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div
+            className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          />
+          <p className="text-gray-600 dark:text-gray-400">
+            Checking your session...
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
 
   // Mock leaderboard data
   const leaderboardData = [

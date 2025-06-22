@@ -68,7 +68,8 @@ const AuthCallbackPage: React.FC = () => {
           // Redirect to dashboard after a brief success message
           setTimeout(() => {
             console.log('Redirecting to dashboard');
-            navigate('/dashboard', { replace: true });
+            // Force a page reload to ensure auth state is properly updated
+            window.location.href = '/dashboard';
           }, 2000);
         } else {
           throw new Error('No authentication tokens received');

@@ -45,7 +45,7 @@ const RequireAuth: React.FC<RequireAuthProps> = ({
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           />
-          <p className="text-gray-600 dark:text-gray-400">Verifying your session...</p>
+          <p className="text-gray-600 dark:text-gray-400">Checking authentication...</p>
         </motion.div>
       </div>
     );

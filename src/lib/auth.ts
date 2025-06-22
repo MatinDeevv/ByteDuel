@@ -443,12 +443,16 @@ export function useAuth() {
       console.log('Initializing auth...');
       
       try {
-        setLoading(true);
+        // Don't set loading here if we already have a user
+        if (!user) {
+          setLoading(true);
+        }
         
         // Check if Supabase is available
         if (!isSupabaseAvailable()) {
           console.error('Supabase not available');
           setError('Authentication service is not configured properly.');
+          setLoading(false);
           return;
         }
 
@@ -505,6 +509,7 @@ export function useAuth() {
               
               if (mounted) {
                 setProfile(userProfile);
+                setLoading(false);
               }
             } else {
               // Clear tokens on sign out
@@ -512,12 +517,14 @@ export function useAuth() {
               if (mounted) {
                 setUser(null);
                 setProfile(null);
+                setLoading(false);
               }
             }
           } catch (authError) {
             console.error('Auth state change error:', authError);
             if (mounted) {
               setError('Authentication error occurred. Please try signing in again.');
+              setLoading(false);
             }
           }
         }

@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthState>()(
       set({ 
         user: null, 
         profile: null, 
-        loading: false, 
+        loading: true, // Keep loading true during reset
         error: null,
         showAuthModal: false 
       });

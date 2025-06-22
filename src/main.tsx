@@ -29,12 +29,12 @@ createRoot(document.getElementById('root')!).render(
             </RequireAuth>
           } />
           <Route path="duel/:id" element={
-            <RequireAuth>
+            <RequireAuth showModal={true}>
               <DuelPage />
             </RequireAuth>
           } />
           <Route path="practice" element={
-            <RequireAuth>
+            <RequireAuth showModal={true}>
               <PracticePage />
             </RequireAuth>
           } />
