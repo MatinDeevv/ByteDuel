@@ -43,7 +43,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-blue-900 dark:to-gray-900 transition-colors duration-300">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-blue-900 dark:to-gray-900">
         {/* Header */}
         <header className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ const LoginPage: React.FC = () => {
                 {/* GitHub Sign In */}
                 <AnimatedButton
                   onClick={handleGitHubSignIn}
-                  disabled={loading}
+                  disabled={false}
                   className="w-full mb-6 bg-gray-900 hover:bg-gray-800 text-white"
                   size="lg"
                 >

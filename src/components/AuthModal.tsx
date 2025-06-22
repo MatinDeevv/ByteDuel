@@ -86,7 +86,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, redirectTo = '/d
           {/* GitHub Sign In */}
           <AnimatedButton
             onClick={handleGitHubSignIn}
-            disabled={loading}
+            disabled={false}
             className="w-full mb-4 bg-gray-900 hover:bg-gray-800 text-white"
           >
             <Github className="h-5 w-5 mr-2" />
