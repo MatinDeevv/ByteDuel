@@ -66,7 +66,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ selectedMode, onModeSelect,
             className={`
               relative p-6 rounded-xl border-2 transition-all duration-300 text-left
               ${isSelected 
-                ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/25 dark:bg-blue-500/10' 
+                ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/25' 
                 : 'border-gray-300 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 hover:border-gray-400 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-800'
               }
             `}

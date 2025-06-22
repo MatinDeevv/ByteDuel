@@ -175,24 +175,21 @@ const LandingPage: React.FC = () => {
               {/* User Rating Display */}
               {profile && (
                 <div className="text-center">
-                  <div className="flex items-center justify-center space-x-3 mb-4">
-                    {profile.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt={profile.display_name}
-                        className="w-12 h-12 rounded-full border-2 border-gray-200 dark:border-gray-700"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-bold text-gray-600 dark:text-gray-300">
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 mb-4">
+                    <div className="flex items-center justify-center space-x-3 mb-2">
+                      <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">
                         {profile.display_name.charAt(0).toUpperCase()}
                       </div>
-                    )}
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {profile.display_name}
-                      </p>
-                      <RatingDisplay rating={profile.elo_rating} size="sm" />
+                      <div>
+                        <p className="font-semibold text-green-900 dark:text-green-100">
+                          Welcome, {profile.display_name}!
+                        </p>
+                        <RatingDisplay rating={profile.elo_rating} size="sm" />
+                      </div>
                     </div>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Ready to compete? Choose your game mode above!
+                    </p>
                   </div>
                 </div>
               )}
