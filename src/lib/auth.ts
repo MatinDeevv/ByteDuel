@@ -1,5 +1,5 @@
 /**
- * Enhanced Authentication Service with fastest-path login flow
+ * Enhanced Authentication Service - FINAL VERSION
  */
 import React from 'react';
 import Cookies from 'js-cookie';
@@ -215,62 +215,67 @@ export async function getCurrentUserWithProfile(): Promise<{ user: User; profile
     return null;
   }
 
-  // Get session from Supabase
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
-  console.log('getCurrentUserWithProfile - session:', !!session, 'error:', error);
-  
-  if (error || !session?.user) {
-    // Try to restore from cookies
-    const { accessToken, refreshToken } = getAuthTokens();
+  try {
+    // Get session from Supabase
+    const { data: { session }, error } = await supabase.auth.getSession();
     
-    console.log('No session, trying cookies - tokens available:', !!accessToken, !!refreshToken);
+    console.log('getCurrentUserWithProfile - session:', !!session, 'error:', error);
     
-    if (accessToken && refreshToken) {
-      try {
-        const { data, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
+    if (error || !session?.user) {
+      // Try to restore from cookies
+      const { accessToken, refreshToken } = getAuthTokens();
+      
+      console.log('No session, trying cookies - tokens available:', !!accessToken, !!refreshToken);
+      
+      if (accessToken && refreshToken) {
+        try {
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
 
-        console.log('Cookie restore result:', !!data.user, 'error:', sessionError);
-        if (sessionError || !data.user) {
+          console.log('Cookie restore result:', !!data.user, 'error:', sessionError);
+          if (sessionError || !data.user) {
+            clearAuthTokens();
+            return null;
+          }
+
+          // Get profile for restored session
+          const profile = await getUserProfile(data.user.id);
+          console.log('Profile fetched for restored session:', !!profile);
+          
+          if (!profile) {
+            const newProfile = await createUserProfile(data.user);
+            console.log('Created new profile for restored session');
+            return { user: data.user, profile: newProfile };
+          }
+
+          return { user: data.user, profile };
+        } catch (error) {
+          console.error('Cookie restore failed:', error);
           clearAuthTokens();
           return null;
         }
-
-        // Get profile for restored session
-        const profile = await getUserProfile(data.user.id);
-        console.log('Profile fetched for restored session:', !!profile);
-        
-        if (!profile) {
-          const newProfile = await createUserProfile(data.user);
-          console.log('Created new profile for restored session');
-          return { user: data.user, profile: newProfile };
-        }
-
-        return { user: data.user, profile };
-      } catch (error) {
-        console.error('Cookie restore failed:', error);
-        clearAuthTokens();
-        return null;
       }
+      
+      return null;
     }
+
+    // Get profile for current session
+    const profile = await getUserProfile(session.user.id);
+    console.log('Profile fetched for current session:', !!profile);
     
+    if (!profile) {
+      const newProfile = await createUserProfile(session.user);
+      console.log('Created new profile for current session');
+      return { user: session.user, profile: newProfile };
+    }
+
+    return { user: session.user, profile };
+  } catch (error) {
+    console.error('getCurrentUserWithProfile error:', error);
     return null;
   }
-
-  // Get profile for current session
-  const profile = await getUserProfile(session.user.id);
-  console.log('Profile fetched for current session:', !!profile);
-  
-  if (!profile) {
-    const newProfile = await createUserProfile(session.user);
-    console.log('Created new profile for current session');
-    return { user: session.user, profile: newProfile };
-  }
-
-  return { user: session.user, profile };
 }
 
 /**
@@ -289,18 +294,23 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     return null;
   }
 
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-  if (error) {
-    console.error('Failed to fetch user profile:', error);
+    if (error) {
+      console.error('Failed to fetch user profile:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('getUserProfile error:', error);
     return null;
   }
-
-  return data;
 }
 
 /**
@@ -409,7 +419,7 @@ export async function syncWithGitHub(userId: string, githubUsername: string): Pr
 }
 
 /**
- * Enhanced auth hook with onAuthStateChange listener
+ * Enhanced auth hook with proper state management
  */
 export function useAuth() {
   const {
@@ -427,14 +437,18 @@ export function useAuth() {
 
   React.useEffect(() => {
     let mounted = true;
+    let subscription: any = null;
 
     const initializeAuth = async () => {
+      console.log('Initializing auth...');
+      
       try {
+        setLoading(true);
         
         // Check if Supabase is available
         if (!isSupabaseAvailable()) {
+          console.error('Supabase not available');
           setError('Authentication service is not configured properly.');
-          setLoading(false);
           return;
         }
 
@@ -444,9 +458,11 @@ export function useAuth() {
         if (!mounted) return;
 
         if (result) {
+          console.log('Auth initialized with user:', result.user.id);
           setUser(result.user);
           setProfile(result.profile);
         } else {
+          console.log('Auth initialized - no user');
           setUser(null);
           setProfile(null);
         }
@@ -462,58 +478,59 @@ export function useAuth() {
       }
     };
 
-    initializeAuth();
+    // Set up auth state listener
+    const setupAuthListener = () => {
+      if (!isSupabaseAvailable()) return;
 
-    // Listen for auth changes with onAuthStateChange
-    let subscription: any = null;
-    
-    if (isSupabaseAvailable()) {
       const { data } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
+        async (event, session) => {
+          if (!mounted) return;
 
-        console.log('Auth state change:', event, session?.user?.id);
+          console.log('Auth state change:', event, session?.user?.id);
 
-        try {
-          if (session?.user) {
-            // Store tokens in cookies
-            storeAuthTokens(session.access_token, session.refresh_token);
-            
-            setUser(session.user);
-            
-            // Fetch or create user profile
-            let userProfile = await getUserProfile(session.user.id);
-            
-            if (!userProfile) {
-              // Create profile for new users
-              userProfile = await createUserProfile(session.user);
+          try {
+            if (session?.user) {
+              // Store tokens in cookies
+              storeAuthTokens(session.access_token, session.refresh_token);
+              
+              setUser(session.user);
+              
+              // Fetch or create user profile
+              let userProfile = await getUserProfile(session.user.id);
+              
+              if (!userProfile) {
+                // Create profile for new users
+                userProfile = await createUserProfile(session.user);
+              }
+              
+              if (mounted) {
+                setProfile(userProfile);
+              }
+            } else {
+              // Clear tokens on sign out
+              clearAuthTokens();
+              if (mounted) {
+                setUser(null);
+                setProfile(null);
+              }
             }
-            
+          } catch (authError) {
+            console.error('Auth state change error:', authError);
             if (mounted) {
-              setProfile(userProfile);
+              setError('Authentication error occurred. Please try signing in again.');
             }
-          } else {
-            // Clear tokens on sign out
-            clearAuthTokens();
-            if (mounted) {
-              setUser(null);
-              setProfile(null);
-            }
-          }
-        } catch (authError) {
-          console.error('Auth state change error:', authError);
-          if (mounted) {
-            setError('Authentication error occurred. Please try signing in again.');
-          }
-        } finally {
-          if (mounted) {
-            setLoading(false);
           }
         }
-      }
       );
       subscription = data.subscription;
-    }
+    };
+
+    // Initialize auth and set up listener
+    initializeAuth().then(() => {
+      if (mounted) {
+        setupAuthListener();
+      }
+    });
 
     return () => {
       mounted = false;

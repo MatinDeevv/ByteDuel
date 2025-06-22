@@ -14,6 +14,8 @@ const AuthCallbackPage: React.FC = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      console.log('Auth callback started');
+      
       try {
         setLoading(true);
 
@@ -23,6 +25,12 @@ const AuthCallbackPage: React.FC = () => {
 
         // Parse tokens from URL fragment
         const { accessToken, refreshToken, error: authError } = parseAuthFragment();
+        
+        console.log('Parsed tokens:', { 
+          hasAccessToken: !!accessToken, 
+          hasRefreshToken: !!refreshToken, 
+          error: authError 
+        });
         
         if (authError) {
           throw new Error(authError);
@@ -38,6 +46,12 @@ const AuthCallbackPage: React.FC = () => {
             refresh_token: refreshToken,
           });
 
+          console.log('Session set result:', { 
+            hasUser: !!data.user, 
+            hasSession: !!data.session, 
+            error 
+          });
+
           if (error) {
             throw error;
           }
@@ -51,9 +65,10 @@ const AuthCallbackPage: React.FC = () => {
           
           setStatus('success');
           
-          // Redirect to home after a brief success message
+          // Redirect to dashboard after a brief success message
           setTimeout(() => {
-            navigate('/', { replace: true });
+            console.log('Redirecting to dashboard');
+            navigate('/dashboard', { replace: true });
           }, 2000);
         } else {
           throw new Error('No authentication tokens received');
@@ -65,10 +80,11 @@ const AuthCallbackPage: React.FC = () => {
         setGlobalError(errorMessage);
         setStatus('error');
         
-        // Clear any fragments and redirect to home after error
+        // Clear any fragments and redirect to login after error
         clearUrlFragment();
         setTimeout(() => {
-          navigate('/', { replace: true });
+          console.log('Redirecting to login after error');
+          navigate('/login', { replace: true });
         }, 3000);
       } finally {
         setLoading(false);
@@ -144,7 +160,7 @@ const AuthCallbackPage: React.FC = () => {
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}
               />
-              <span>Redirecting to home...</span>
+              <span>Redirecting to dashboard...</span>
             </motion.div>
           </>
         )}
@@ -181,7 +197,7 @@ const AuthCallbackPage: React.FC = () => {
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}
               />
-              <span>Redirecting to home page...</span>
+              <span>Redirecting to login page...</span>
             </motion.div>
           </>
         )}

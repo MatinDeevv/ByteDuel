@@ -54,62 +54,74 @@ const DashboardPage: React.FC = () => {
   const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
+  console.log('DashboardPage render:', { 
+    hasUser: !!user, 
+    hasProfile: !!profile, 
+    authLoading, 
+    dataLoading 
+  });
+
   useEffect(() => {
-    // Simulate loading dashboard data
-    const loadDashboardData = async () => {
-      try {
-        // Mock data - in real app, fetch from API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setStats({
-          totalMatches: 42,
-          wins: 28,
-          losses: 14,
-          winRate: 66.7,
-          currentStreak: 3,
-          bestStreak: 8,
-          averageTime: 245, // seconds
-          fastestSolve: 89, // seconds
-        });
-
-        setRecentMatches([
-          {
-            id: '1',
-            opponent: 'CodeNinja',
-            result: 'win',
-            ratingChange: +24,
-            duration: 180,
-            date: '2024-01-15',
-          },
-          {
-            id: '2',
-            opponent: 'AlgoMaster',
-            result: 'loss',
-            ratingChange: -18,
-            duration: 300,
-            date: '2024-01-14',
-          },
-          {
-            id: '3',
-            opponent: 'DevGuru',
-            result: 'win',
-            ratingChange: +22,
-            duration: 156,
-            date: '2024-01-13',
-          },
-        ]);
-      } catch (error) {
-        toast.error('Failed to load dashboard data', 'Please refresh the page to try again');
-      } finally {
-        setDataLoading(false);
-      }
-    };
-
-    // Only load dashboard data if we have a profile
+    // Only load dashboard data if we have a profile and auth is not loading
     if (profile && !authLoading) {
+      console.log('Loading dashboard data for user:', profile.display_name);
+      
+      const loadDashboardData = async () => {
+        try {
+          // Simulate loading dashboard data
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          setStats({
+            totalMatches: 42,
+            wins: 28,
+            losses: 14,
+            winRate: 66.7,
+            currentStreak: 3,
+            bestStreak: 8,
+            averageTime: 245, // seconds
+            fastestSolve: 89, // seconds
+          });
+
+          setRecentMatches([
+            {
+              id: '1',
+              opponent: 'CodeNinja',
+              result: 'win',
+              ratingChange: +24,
+              duration: 180,
+              date: '2024-01-15',
+            },
+            {
+              id: '2',
+              opponent: 'AlgoMaster',
+              result: 'loss',
+              ratingChange: -18,
+              duration: 300,
+              date: '2024-01-14',
+            },
+            {
+              id: '3',
+              opponent: 'DevGuru',
+              result: 'win',
+              ratingChange: +22,
+              duration: 156,
+              date: '2024-01-13',
+            },
+          ]);
+        } catch (error) {
+          console.error('Failed to load dashboard data:', error);
+          toast.error('Failed to load dashboard data', 'Please refresh the page to try again');
+        } finally {
+          setDataLoading(false);
+        }
+      };
+
       loadDashboardData();
+    } else if (!authLoading && !profile) {
+      console.log('No profile found, stopping data loading');
+      setDataLoading(false);
     }
-  }, []);
+  }, [profile, authLoading]);
 
   const handleSignOut = async () => {
     try {
@@ -143,8 +155,8 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Show loading state while auth is loading or profile is being fetched
-  if (authLoading || !profile) {
+  // Show loading state while auth is loading
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <motion.div
@@ -158,8 +170,34 @@ const DashboardPage: React.FC = () => {
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           />
           <p className="text-gray-600 dark:text-gray-400">
-            {authLoading ? 'Loading your profile...' : 'Setting up dashboard...'}
+            Loading your dashboard...
           </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Show error if no profile after auth loading is complete
+  if (!authLoading && !profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <motion.div
+          className="text-center max-w-md"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Profile Not Found
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            We couldn't load your profile. Please try signing in again.
+          </p>
+          <AnimatedButton
+            onClick={() => navigate('/login')}
+            variant="primary"
+          >
+            Sign In Again
+          </AnimatedButton>
         </motion.div>
       </div>
     );
@@ -180,7 +218,7 @@ const DashboardPage: React.FC = () => {
               </motion.div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Welcome back, {profile.display_name}!
+                  Welcome back, {profile?.display_name}!
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
                   Ready for your next coding challenge?
@@ -189,7 +227,7 @@ const DashboardPage: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <RatingDisplay rating={profile.rating} size="lg" />
+              <RatingDisplay rating={profile?.rating || 1200} size="lg" />
               <ThemeToggle />
               <AnimatedButton
                 onClick={() => navigate('/profile')}
@@ -224,7 +262,7 @@ const DashboardPage: React.FC = () => {
               <div className="flex items-center space-x-6">
                 {/* Avatar */}
                 <div className="relative">
-                  {profile.avatar_url ? (
+                  {profile?.avatar_url ? (
                     <img
                       src={profile.avatar_url}
                       alt={profile.display_name}
@@ -232,7 +270,7 @@ const DashboardPage: React.FC = () => {
                     />
                   ) : (
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
-                      {profile.display_name.charAt(0).toUpperCase()}
+                      {profile?.display_name.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border-2 border-gray-200 dark:border-gray-700">
@@ -244,9 +282,9 @@ const DashboardPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {profile.display_name}
+                      {profile?.display_name}
                     </h2>
-                    {profile.github_username && (
+                    {profile?.github_username && (
                       <div className="flex items-center text-gray-600 dark:text-gray-400 text-sm">
                         <Github className="h-4 w-4 mr-1" />
                         <span>@{profile.github_username}</span>
@@ -256,15 +294,15 @@ const DashboardPage: React.FC = () => {
                   <div className="flex items-center space-x-6 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1" />
-                      <span>Joined {new Date(profile.created_at).toLocaleDateString()}</span>
+                      <span>Joined {new Date(profile?.created_at || '').toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center">
                       <Trophy className="h-4 w-4 mr-1" />
-                      <span>{profile.wins} wins</span>
+                      <span>{profile?.wins || 0} wins</span>
                     </div>
                     <div className="flex items-center">
                       <Target className="h-4 w-4 mr-1" />
-                      <span>{profile.losses} losses</span>
+                      <span>{profile?.losses || 0} losses</span>
                     </div>
                   </div>
                 </div>
@@ -272,7 +310,7 @@ const DashboardPage: React.FC = () => {
                 {/* Quick Actions */}
                 <div className="flex space-x-3">
                   <AnimatedButton
-                    onClick={() => setShowAuthModal(true, 'signin')}
+                    onClick={() => navigate('/')}
                     variant="primary"
                     className="px-6"
                   >
@@ -314,7 +352,7 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Win Rate</p>
-                    <p className="text-2xl font-bold text-green-500">{stats?.winRate}%</p>
+                    <p className="text-2xl font-bold text-green-500">{stats?.winRate || 0}%</p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-green-500" />
                 </div>
@@ -324,7 +362,7 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Streak</p>
-                    <p className="text-2xl font-bold text-blue-500">{stats?.currentStreak}</p>
+                    <p className="text-2xl font-bold text-blue-500">{stats?.currentStreak || 0}</p>
                   </div>
                   <Zap className="h-8 w-8 text-blue-500" />
                 </div>
@@ -344,7 +382,7 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Matches</p>
-                    <p className="text-2xl font-bold text-orange-500">{stats?.totalMatches}</p>
+                    <p className="text-2xl font-bold text-orange-500">{stats?.totalMatches || 0}</p>
                   </div>
                   <Users className="h-8 w-8 text-orange-500" />
                 </div>
@@ -384,7 +422,7 @@ const DashboardPage: React.FC = () => {
                       No matches played yet. Start your first duel!
                     </p>
                     <AnimatedButton
-                      onClick={() => setShowAuthModal(true, 'signin')}
+                      onClick={() => navigate('/')}
                       variant="primary"
                     >
                       Find Match

@@ -17,12 +17,19 @@ interface RequireAuthProps {
 const RequireAuth: React.FC<RequireAuthProps> = ({ 
   children, 
   fallback,
-  redirectTo = '/',
-  showModal = true
+  redirectTo = '/login',
+  showModal = false
 }) => {
   const { user, loading, error } = useAuth();
   const { showAuthModal, setShowAuthModal } = useAuthStore();
   const location = useLocation();
+
+  console.log('RequireAuth:', { 
+    hasUser: !!user, 
+    loading, 
+    error, 
+    pathname: location.pathname 
+  });
 
   // Show loading spinner while checking auth
   if (loading) {
@@ -75,11 +82,13 @@ const RequireAuth: React.FC<RequireAuthProps> = ({
 
   // If user is authenticated, render children
   if (user) {
+    console.log('RequireAuth: User authenticated, rendering children');
     return <>{children}</>;
   }
 
   // If custom fallback provided, use it
   if (fallback) {
+    console.log('RequireAuth: Using custom fallback');
     return <>{fallback}</>;
   }
 
@@ -147,6 +156,7 @@ const RequireAuth: React.FC<RequireAuthProps> = ({
   }
 
   // Default: redirect to specified route
+  console.log('RequireAuth: Redirecting to', redirectTo);
   return <Navigate to={redirectTo} state={{ from: location }} replace />;
 };
 

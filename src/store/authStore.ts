@@ -25,32 +25,53 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>()(
-  subscribeWithSelector((set) => ({
-    // Initial state
+  subscribeWithSelector((set, get) => ({
+    // Initial state - CRITICAL: loading starts as true
     user: null,
     profile: null,
-    loading: false,
+    loading: true,
     error: null,
     showAuthModal: false,
     authModalMode: 'signin',
 
     // Actions
-    setUser: (user) => set({ user }),
-    setProfile: (profile) => set({ profile }),
-    setLoading: (loading) => set({ loading }),
-    setError: (error) => set({ error }),
+    setUser: (user) => {
+      console.log('AuthStore: setUser', user?.id || 'null');
+      set({ user });
+    },
+    
+    setProfile: (profile) => {
+      console.log('AuthStore: setProfile', profile?.display_name || 'null');
+      set({ profile });
+    },
+    
+    setLoading: (loading) => {
+      console.log('AuthStore: setLoading', loading);
+      set({ loading });
+    },
+    
+    setError: (error) => {
+      console.log('AuthStore: setError', error);
+      set({ error });
+    },
+    
     setShowAuthModal: (show, mode = 'signin') => set({ 
       showAuthModal: show, 
       authModalMode: mode,
       error: null // Clear error when opening modal
     }),
+    
     clearError: () => set({ error: null }),
-    reset: () => set({ 
-      user: null, 
-      profile: null, 
-      loading: false, 
-      error: null,
-      showAuthModal: false 
-    }),
+    
+    reset: () => {
+      console.log('AuthStore: reset');
+      set({ 
+        user: null, 
+        profile: null, 
+        loading: false, 
+        error: null,
+        showAuthModal: false 
+      });
+    },
   }))
 );
