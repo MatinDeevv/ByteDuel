@@ -40,80 +40,61 @@ export function useAuth(): AuthState & AuthActions {
   } = useQuery({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
-      console.log('🔍 Auth query running...');
       
       try {
         // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          console.error('❌ Session error:', sessionError);
           throw sessionError;
         }
         
         if (!session?.user) {
-          console.log('ℹ️ No session found');
           return null;
         }
-        
-        console.log('✅ Session found for user:', session.user.id);
-        console.log('📧 User email:', session.user.email);
-        console.log('🔗 User metadata:', session.user.user_metadata);
         
         // Get or create profile immediately
         let profile = await getProfile(session.user.id);
         
         if (!profile) {
-          console.log('🆕 No profile found, creating one...');
           profile = await createProfile(session.user);
         }
         
-        console.log('✅ Profile ready:', profile.display_name);
         return { user: session.user, profile };
       } catch (error) {
-        console.error('💥 Auth query error:', error);
         throw error;
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error) => {
-      console.log(`🔄 Auth query retry ${failureCount}:`, error);
       return failureCount < 2;
     },
   });
 
   // Set up auth state listener
   useEffect(() => {
-    console.log('🎧 Setting up auth state listener...');
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 Auth state change:', event, !!session?.user);
         
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log('✅ User signed in, refetching auth data...');
           // Immediately refetch to get/create profile
           queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
           setError(null);
         } else if (event === 'SIGNED_OUT') {
-          console.log('👋 User signed out, clearing auth data...');
           queryClient.setQueryData(AUTH_QUERY_KEY, null);
           setError(null);
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('🔄 Token refreshed');
         }
       }
     );
 
     return () => {
-      console.log('🔌 Cleaning up auth state listener...');
       subscription.unsubscribe();
     };
   }, [queryClient]);
 
   // GitHub sign-in
   const signInWithGitHub = async () => {
-    console.log('🚀 Starting GitHub sign in...');
     
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -125,21 +106,16 @@ export function useAuth(): AuthState & AuthActions {
       });
 
       if (error) {
-        console.error('❌ GitHub OAuth error:', error);
         setError(error.message);
         throw error;
       }
-      
-      console.log('✅ GitHub OAuth initiated successfully');
     } catch (error) {
-      console.error('💥 GitHub sign in failed:', error);
       throw error;
     }
   };
 
   // Email sign-in
   const signInWithEmail = async (email: string, password: string) => {
-    console.log('📧 Starting email sign in for:', email);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -148,22 +124,18 @@ export function useAuth(): AuthState & AuthActions {
       });
 
       if (error) {
-        console.error('❌ Email sign in error:', error);
         setError(error.message);
         throw error;
       }
 
-      console.log('✅ Email sign in successful');
       setError(null);
     } catch (error) {
-      console.error('💥 Email sign in failed:', error);
       throw error;
     }
   };
 
   // Email sign-up
   const signUpWithEmail = async (email: string, password: string, displayName: string) => {
-    console.log('📝 Starting email sign up for:', email);
     
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -177,35 +149,28 @@ export function useAuth(): AuthState & AuthActions {
       });
 
       if (error) {
-        console.error('❌ Email sign up error:', error);
         setError(error.message);
         throw error;
       }
 
-      console.log('✅ Email sign up successful');
       setError(null);
     } catch (error) {
-      console.error('💥 Email sign up failed:', error);
       throw error;
     }
   };
 
   // Sign out
   const signOut = async () => {
-    console.log('👋 Signing out...');
     
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('❌ Sign out error:', error);
         setError(error.message);
         throw error;
       }
       
-      console.log('✅ Sign out successful');
       setError(null);
     } catch (error) {
-      console.error('💥 Sign out failed:', error);
       throw error;
     }
   };
@@ -310,7 +275,6 @@ export function useAuth(): AuthState & AuthActions {
  * Get existing profile
  */
 async function getProfile(userId: string): Promise<Profile | null> {
-  console.log('🔍 Getting profile for user:', userId);
   
   try {
     const { data, error } = await supabase
@@ -320,19 +284,12 @@ async function getProfile(userId: string): Promise<Profile | null> {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('❌ Error getting profile:', error);
       throw error;
     }
 
-    if (data) {
-      console.log('✅ Profile found:', data.display_name);
-    } else {
-      console.log('ℹ️ No profile found');
-    }
 
     return data || null;
   } catch (error) {
-    console.error('💥 Get profile failed:', error);
     throw error;
   }
 }
@@ -341,7 +298,6 @@ async function getProfile(userId: string): Promise<Profile | null> {
  * Create new profile from user data
  */
 async function createProfile(user: User): Promise<Profile> {
-  console.log('🆕 Creating profile for user:', user.id);
   
   try {
     const githubData = user.user_metadata || {};
@@ -361,7 +317,6 @@ async function createProfile(user: User): Promise<Profile> {
       games_won: 0,
     };
 
-    console.log('📝 Profile data to create:', profileData);
 
     const { data, error } = await supabase
       .from('users')
@@ -370,14 +325,11 @@ async function createProfile(user: User): Promise<Profile> {
       .single();
 
     if (error) {
-      console.error('❌ Profile creation error:', error);
       throw error;
     }
 
-    console.log('✅ Profile created successfully:', data.display_name);
     return data;
   } catch (error) {
-    console.error('💥 Create profile failed:', error);
     throw error;
   }
 }
