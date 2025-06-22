@@ -435,107 +435,76 @@ export function useAuth() {
     reset,
   } = useAuthStore();
 
+  // Initialize auth only once
   React.useEffect(() => {
     let mounted = true;
     let subscription: any = null;
-    let initialized = false;
 
-    const initializeAuth = async () => {
-      if (initialized) return;
-      initialized = true;
-      
+    const initialize = async () => {
       console.log('Initializing auth...');
       
-      try {
-        setLoading(true);
-        
-        // Check if Supabase is available
-        if (!isSupabaseAvailable()) {
-          console.error('Supabase not available');
-          setError('Authentication service is not configured properly.');
-          setLoading(false);
-          return;
-        }
+      if (!isSupabaseAvailable()) {
+        console.error('Supabase not available');
+        setError('Authentication service is not configured properly.');
+        return;
+      }
 
-        // Get initial session with profile in one call
-        const result = await getCurrentUserWithProfile();
+      try {
+        // Set up auth listener first
+        const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (!mounted) return;
+          
+          console.log('Auth state change:', event, session?.user?.id);
+          
+          if (session?.user) {
+            storeAuthTokens(session.access_token, session.refresh_token);
+            setUser(session.user);
+            
+            // Get or create profile
+            try {
+              let userProfile = await getUserProfile(session.user.id);
+              if (!userProfile) {
+                userProfile = await createUserProfile(session.user);
+              }
+              if (mounted) {
+                setProfile(userProfile);
+              }
+            } catch (profileError) {
+              console.error('Profile error:', profileError);
+            }
+          } else {
+            clearAuthTokens();
+            if (mounted) {
+              setUser(null);
+              setProfile(null);
+            }
+          }
+        });
+        
+        subscription = data.subscription;
+        
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
-
-        if (result) {
-          console.log('Auth initialized with user:', result.user.id);
-          setUser(result.user);
-          setProfile(result.profile);
+        
+        if (session?.user) {
+          console.log('Initial session found:', session.user.id);
+          // Auth listener will handle the rest
         } else {
-          console.log('Auth initialized - no user');
+          console.log('No initial session');
           setUser(null);
           setProfile(null);
         }
-      } catch (initError) {
-        console.error('Auth initialization error:', initError);
+      } catch (error) {
+        console.error('Auth initialization error:', error);
         if (mounted) {
-          setError('Failed to initialize authentication. Please refresh the page.');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
+          setError('Failed to initialize authentication.');
         }
       }
     };
 
-    // Set up auth state listener
-    const setupAuthListener = () => {
-      if (!isSupabaseAvailable()) return;
-
-      const { data } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (!mounted) return;
-
-          console.log('Auth state change:', event, session?.user?.id);
-
-          try {
-            if (session?.user) {
-              // Store tokens in cookies
-              storeAuthTokens(session.access_token, session.refresh_token);
-              
-              setUser(session.user);
-              
-              // Fetch or create user profile
-              let userProfile = await getUserProfile(session.user.id);
-              
-              if (!userProfile) {
-                // Create profile for new users
-                userProfile = await createUserProfile(session.user);
-              }
-              
-              if (mounted) {
-                setProfile(userProfile);
-                setLoading(false);
-              }
-            } else {
-              // Clear tokens on sign out
-              clearAuthTokens();
-              if (mounted) {
-                setUser(null);
-                setProfile(null);
-                setLoading(false);
-              }
-            }
-          } catch (authError) {
-            console.error('Auth state change error:', authError);
-            if (mounted) {
-              setError('Authentication error occurred. Please try signing in again.');
-              setLoading(false);
-            }
-          }
-        }
-      );
-      subscription = data.subscription;
-    };
-
-    // Set up listener first, then initialize
-    setupAuthListener();
-    initializeAuth();
+    initialize();
 
     return () => {
       mounted = false;
@@ -543,7 +512,7 @@ export function useAuth() {
         subscription.unsubscribe();
       }
     };
-  }, []); // Remove dependencies to prevent re-initialization
+  }, []);
 
   // Auth action handlers with proper error handling
   const handleSignInWithGitHub = async () => {

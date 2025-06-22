@@ -63,8 +63,8 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     // Only load dashboard data if we have a profile and auth is not loading
-    if (user && !authLoading) {
-      console.log('Loading dashboard data for user:', profile.display_name);
+    if (user && profile && !authLoading) {
+      console.log('Loading dashboard data for user:', profile?.display_name);
       
       const loadDashboardData = async () => {
         try {
@@ -117,7 +117,7 @@ const DashboardPage: React.FC = () => {
       };
 
       loadDashboardData();
-    } else if (!authLoading && !user) {
+    } else if (!authLoading) {
       console.log('No profile found, stopping data loading');
       setDataLoading(false);
     }

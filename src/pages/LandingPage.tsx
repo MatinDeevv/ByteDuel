@@ -26,11 +26,11 @@ const LandingPage: React.FC = () => {
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
-    if (user && !loading) {
+    if (user) {
       console.log('User authenticated, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, navigate]);
 
   // Show loading while checking auth
   if (loading) {
