@@ -22,9 +22,10 @@ import AnimatedCard from '../components/AnimatedCard';
 import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
-import { useAuth } from '../lib/auth';
-import { useAuthStore } from '../store/authStore';
-import { toast } from '../store/toastStore';
+import { useAuth } from '../hooks/useAuth';
+import { useLeaderboardDashboard } from '../hooks/useLeaderboard';
+import { useDuelStats, useUserRecentDuels } from '../hooks/useDuels';
+import { usePracticeDashboard } from '../hooks/usePractice';
 
 interface DashboardStats {
   totalMatches: number;
@@ -48,88 +49,22 @@ interface RecentMatch {
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut, loading: authLoading } = useAuth();
-  const { setShowAuthModal } = useAuthStore();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const { user, profile, signOut } = useAuth();
+  
+  // Load dashboard data using React Query hooks
+  const { globalLeaderboard, userRanking } = useLeaderboardDashboard(profile?.id || null);
+  const { data: duelStats } = useDuelStats();
+  const { data: recentDuels, isLoading: duelsLoading } = useUserRecentDuels(profile?.id || null, 5);
+  const { stats: practiceStats, loading: practiceLoading } = usePracticeDashboard(profile?.id || null);
 
-  console.log('DashboardPage render:', { 
-    hasUser: !!user, 
-    hasProfile: !!profile, 
-    authLoading, 
-    dataLoading 
-  });
-
-  useEffect(() => {
-    // Only load dashboard data if we have a profile and auth is not loading
-    if (user && profile && !authLoading) {
-      console.log('Loading dashboard data for user:', profile?.display_name);
-      
-      const loadDashboardData = async () => {
-        try {
-          // Simulate loading dashboard data
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          setStats({
-            totalMatches: 42,
-            wins: 28,
-            losses: 14,
-            winRate: 66.7,
-            currentStreak: 3,
-            bestStreak: 8,
-            averageTime: 245, // seconds
-            fastestSolve: 89, // seconds
-          });
-
-          setRecentMatches([
-            {
-              id: '1',
-              opponent: 'CodeNinja',
-              result: 'win',
-              ratingChange: +24,
-              duration: 180,
-              date: '2024-01-15',
-            },
-            {
-              id: '2',
-              opponent: 'AlgoMaster',
-              result: 'loss',
-              ratingChange: -18,
-              duration: 300,
-              date: '2024-01-14',
-            },
-            {
-              id: '3',
-              opponent: 'DevGuru',
-              result: 'win',
-              ratingChange: +22,
-              duration: 156,
-              date: '2024-01-13',
-            },
-          ]);
-        } catch (error) {
-          console.error('Failed to load dashboard data:', error);
-          toast.error('Failed to load dashboard data', 'Please refresh the page to try again');
-        } finally {
-          setDataLoading(false);
-        }
-      };
-
-      loadDashboardData();
-    } else if (!authLoading) {
-      console.log('No profile found, stopping data loading');
-      setDataLoading(false);
-    }
-  }, [user, profile, authLoading]);
+  const dataLoading = duelsLoading || practiceLoading;
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast.success('Signed out successfully', 'See you next time!');
       navigate('/login', { replace: true });
     } catch (error) {
-      toast.error('Sign out failed', 'Please try again');
+      console.error('Sign out failed:', error);
     }
   };
 
@@ -155,30 +90,8 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Show loading state while auth is loading
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <motion.div
-            className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          />
-          <p className="text-gray-600 dark:text-gray-400">
-            Loading your dashboard...
-          </p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Show error if no user after auth loading is complete
-  if (!authLoading && !user) {
+  // Show error if no user
+  if (!user || !profile) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <motion.div
@@ -228,6 +141,11 @@ const DashboardPage: React.FC = () => {
             
             <div className="flex items-center space-x-4">
               <RatingDisplay rating={profile?.rating || 1200} size="lg" />
+              {userRanking && (
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Rank #{userRanking.rank} ({userRanking.percentile}th percentile)
+                </div>
+              )}
               <ThemeToggle />
               <AnimatedButton
                 onClick={() => navigate('/profile')}
@@ -352,7 +270,9 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Win Rate</p>
-                    <p className="text-2xl font-bold text-green-500">{stats?.winRate || 0}%</p>
+                    <p className="text-2xl font-bold text-green-500">
+                      {profile.total_matches > 0 ? Math.round((profile.wins / profile.total_matches) * 100) : 0}%
+                    </p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-green-500" />
                 </div>
@@ -362,7 +282,7 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Streak</p>
-                    <p className="text-2xl font-bold text-blue-500">{stats?.currentStreak || 0}</p>
+                    <p className="text-2xl font-bold text-blue-500">{profile.current_streak}</p>
                   </div>
                   <Zap className="h-8 w-8 text-blue-500" />
                 </div>
@@ -372,7 +292,9 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg. Time</p>
-                    <p className="text-2xl font-bold text-purple-500">{formatTime(stats?.averageTime || 0)}</p>
+                    <p className="text-2xl font-bold text-purple-500">
+                      {practiceStats?.averageScore ? `${practiceStats.averageScore}%` : 'N/A'}
+                    </p>
                   </div>
                   <Clock className="h-8 w-8 text-purple-500" />
                 </div>
@@ -382,7 +304,7 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Matches</p>
-                    <p className="text-2xl font-bold text-orange-500">{stats?.totalMatches || 0}</p>
+                    <p className="text-2xl font-bold text-orange-500">{profile.total_matches}</p>
                   </div>
                   <Users className="h-8 w-8 text-orange-500" />
                 </div>
@@ -415,7 +337,7 @@ const DashboardPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                ) : recentMatches.length === 0 ? (
+                ) : !recentDuels || recentDuels.length === 0 ? (
                   <div className="text-center py-12">
                     <Code className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -430,9 +352,13 @@ const DashboardPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {recentMatches.map((match, index) => (
+                    {recentDuels.map((duel, index) => {
+                      const isWin = duel.winner_id === profile.id;
+                      const ratingChange = profile.id === duel.creator_id ? duel.creator_rating_change : duel.opponent_rating_change;
+                      
+                      return (
                       <motion.div
-                        key={match.id}
+                        key={duel.id}
                         className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -440,40 +366,41 @@ const DashboardPage: React.FC = () => {
                       >
                         <div className="flex items-center space-x-4">
                           <div className={`p-2 rounded-full ${
-                            match.result === 'win' ? 'bg-green-100 dark:bg-green-900/20' :
-                            match.result === 'loss' ? 'bg-red-100 dark:bg-red-900/20' :
+                            isWin ? 'bg-green-100 dark:bg-green-900/20' :
+                            !isWin ? 'bg-red-100 dark:bg-red-900/20' :
                             'bg-gray-100 dark:bg-gray-800'
                           }`}>
-                            <div className={getResultColor(match.result)}>
-                              {getResultIcon(match.result)}
+                            <div className={getResultColor(isWin ? 'win' : 'loss')}>
+                              {getResultIcon(isWin ? 'win' : 'loss')}
                             </div>
                           </div>
                           
                           <div>
                             <p className="font-medium text-gray-900 dark:text-white">
-                              vs {match.opponent}
+                              vs {duel.opponent_name || 'Unknown'}
                             </p>
                             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                              <span>{formatTime(match.duration)}</span>
-                              <span>{new Date(match.date).toLocaleDateString()}</span>
+                              <span>{duel.topic}</span>
+                              <span>{new Date(duel.ended_at || duel.created_at).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </div>
 
                         <div className="text-right">
                           <div className={`font-bold ${
-                            match.ratingChange > 0 ? 'text-green-500' :
-                            match.ratingChange < 0 ? 'text-red-500' :
+                            ratingChange > 0 ? 'text-green-500' :
+                            ratingChange < 0 ? 'text-red-500' :
                             'text-gray-500'
                           }`}>
-                            {match.ratingChange > 0 ? '+' : ''}{match.ratingChange}
+                            {ratingChange > 0 ? '+' : ''}{ratingChange}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             ELO
                           </div>
                         </div>
                       </motion.div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

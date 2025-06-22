@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap, Github, Code, Trophy, Users, BookOpen, Search, User, LogOut } from 'lucide-react';
@@ -10,9 +10,7 @@ import MatchmakingModal from '../components/MatchmakingModal';
 import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
-import { useMatchmakingStore } from '../store/matchmakingStore';
-import { useAuth } from '../lib/auth';
-import { createDuel } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import { GameMode } from '../types';
 
 const LandingPage: React.FC = () => {
@@ -21,39 +19,7 @@ const LandingPage: React.FC = () => {
   const [githubProfile, setGithubProfile] = useState('');
   const [selectedMode, setSelectedMode] = useState<GameMode>('ranked-duel');
   const [showMatchmaking, setShowMatchmaking] = useState(false);
-  const { setUserId, userRating } = useMatchmakingStore();
-  const { user, profile, signOut, loading } = useAuth();
-
-  // Redirect authenticated users to dashboard
-  useEffect(() => {
-    if (user) {
-      console.log('User authenticated, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, navigate]);
-
-  // Show loading while checking auth
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <motion.div
-            className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          />
-          <p className="text-gray-600 dark:text-gray-400">
-            Loading...
-          </p>
-        </motion.div>
-      </div>
-    );
-  }
-
+  const { user, profile, signOut } = useAuth();
 
   // Mock leaderboard data
   const leaderboardData = [
@@ -66,41 +32,19 @@ const LandingPage: React.FC = () => {
 
   const handleDuelMe = async () => {
     // Require authentication for competitive modes
-    if (!user && (selectedMode === 'ranked-duel' || selectedMode === 'tournament')) {
+    if (!user) {
       navigate('/login');
       return;
     }
     
-    // Require authentication for practice mode too
-    if (!user && selectedMode === 'practice') {
-      navigate('/login');
-      return;
-    }
-    
-    // Set user ID for matchmaking (in real app, get from auth)
-    const userId = user?.id || githubProfile || `guest-${Date.now()}`;
-    setUserId(userId);
-    
-    // Handle ranked duels with matchmaking
-    if (selectedMode === 'ranked-duel') {
-      setShowMatchmaking(true);
-      return;
-    }
-    
+    // Navigate based on selected mode
     if (selectedMode === 'practice') {
       navigate('/practice');
-      return;
-    }
-
-    setIsCreatingDuel(true);
-    try {
-      const profileFingerprint = githubProfile || `guest-${Date.now()}`;
-      const duel = await createDuel(profileFingerprint, selectedMode);
-      navigate(`/duel/${duel.duelId}`);
-    } catch (error) {
-      console.error('Failed to create duel:', error);
-    } finally {
-      setIsCreatingDuel(false);
+    } else if (selectedMode === 'ranked-duel') {
+      setShowMatchmaking(true);
+    } else {
+      // For other modes, redirect to dashboard for now
+      navigate('/dashboard');
     }
   };
 
@@ -223,7 +167,7 @@ const LandingPage: React.FC = () => {
           <AnimatedCard className="max-w-md mx-auto mb-12 p-8" delay={0.8}>
             <div className="space-y-6">
               {/* User Rating Display */}
-              {user && profile && (
+              {profile && (
                 <div className="text-center">
                   <div className="flex items-center justify-center space-x-3 mb-4">
                     {profile.avatar_url ? (
@@ -241,7 +185,7 @@ const LandingPage: React.FC = () => {
                       <p className="font-semibold text-gray-900 dark:text-white">
                         {profile.display_name}
                       </p>
-                      <RatingDisplay rating={profile.rating} size="sm" />
+                      <RatingDisplay rating={profile.elo_rating} size="sm" />
                     </div>
                   </div>
                 </div>
@@ -249,66 +193,52 @@ const LandingPage: React.FC = () => {
               
               {/* GitHub Profile Input (only for guests) */}
               {!user && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    GitHub Profile (Optional)
-                  </label>
-                  <motion.div 
-                    className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3 focus-within:ring-2 focus-within:ring-blue-500 transition-all"
-                    whileFocus={{ scale: 1.02 }}
-                  >
-                    <Github className="h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="your-username"
-                      value={githubProfile}
-                      onChange={(e) => setGithubProfile(e.target.value)}
-                      className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 outline-none"
-                    />
-                  </motion.div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {selectedMode === 'practice' 
-                      ? 'Optional: helps personalize practice problems'
-                      : selectedMode === 'ranked-duel' 
-                        ? 'Sign in for ranked matches and rating tracking'
-                        : 'We\'ll analyze your coding style for fair matchmaking'
-                    }
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                    Sign in to track your progress, compete in ranked matches, and unlock all features!
                   </p>
+                  <div className="space-y-2">
+                    <AnimatedButton
+                      onClick={() => navigate('/login')}
+                      variant="primary"
+                      size="sm"
+                      className="w-full"
+                    >
+                      Sign In
+                    </AnimatedButton>
+                    <AnimatedButton
+                      onClick={() => navigate('/signup')}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      Create Account
+                    </AnimatedButton>
+                  </div>
                 </div>
               )}
 
               <AnimatedButton
-                loading={isCreatingDuel}
                 onClick={handleDuelMe}
-                disabled={isCreatingDuel}
                 className="w-full py-4 text-lg font-semibold"
                 size="lg"
               >
-                {isCreatingDuel ? (
+                {selectedMode === 'practice' ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    {selectedMode === 'practice' ? 'Starting Practice...' : 'Creating Duel...'}
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    Start Practice
+                  </>
+                ) : selectedMode === 'ranked-duel' ? (
+                  <>
+                    <Search className="h-5 w-5 mr-2" />
+                    Find Ranked Match
                   </>
                 ) : (
                   <>
-                    {selectedMode === 'practice' ? (
-                      <>
-                        <BookOpen className="h-5 w-5 mr-2" />
-                        Start Practice
-                      </>
-                    ) : selectedMode === 'ranked-duel' ? (
-                      <>
-                        <Search className="h-5 w-5 mr-2" />
-                        Find Ranked Match
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="h-5 w-5 mr-2" />
-                        {selectedMode === 'timed-trial' ? 'Start Trial' :
-                         selectedMode === 'tournament' ? 'Join Tournament' :
-                         'Challenge Bot'}
-                      </>
-                    )}
+                    <Zap className="h-5 w-5 mr-2" />
+                    {selectedMode === 'timed-trial' ? 'Start Trial' :
+                     selectedMode === 'tournament' ? 'Join Tournament' :
+                     'Challenge Bot'}
                   </>
                 )}
               </AnimatedButton>
