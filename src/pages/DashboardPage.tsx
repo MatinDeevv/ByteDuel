@@ -246,11 +246,11 @@ const DashboardPage: React.FC = () => {
                   </AnimatedButton>
                   <AnimatedButton
                     onClick={() => navigate('/practice')}
-                  <span>{profile?.games_won || 0} wins</span>
+                    variant="secondary"
                   >
                     <BookOpen className="h-4 w-4 mr-2" />
                     Practice
-                  <span>{(profile?.games_played || 0) - (profile?.games_won || 0)} losses</span>
+                  </AnimatedButton>
                 </div>
               </div>
             </AnimatedCard>
