@@ -1,20 +1,11 @@
 /**
- * Enhanced Authentication Hook with React Query
- * Provides optimized auth state management with caching
+ * Simple Client-Side Authentication Hook
+ * Direct GitHub OAuth with immediate profile creation
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { supabase, type Profile } from '../lib/supabaseClient';
-import { User, AuthError } from '@supabase/supabase-js';
-import {
-  getCurrentUserWithProfile,
-  signInWithGitHub as authSignInWithGitHub,
-  signInWithEmail as authSignInWithEmail,
-  signUpWithEmail as authSignUpWithEmail,
-  signOut as authSignOut,
-  updateProfile,
-  syncWithGitHub,
-} from '../services/authService';
+import { User } from '@supabase/supabase-js';
 
 export interface AuthState {
   user: User | null;
@@ -28,32 +19,56 @@ export interface AuthActions {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<Profile>;
-  syncWithGitHub: (githubUsername: string) => Promise<Profile>;
   clearError: () => void;
 }
 
 const AUTH_QUERY_KEY = ['auth'];
 
 /**
- * Main authentication hook
+ * Main authentication hook - simplified approach
  */
 export function useAuth(): AuthState & AuthActions {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [profileCreated, setProfileCreated] = useState(false);
 
-  // Query for current user and profile
+  // Simple auth query that handles everything
   const {
     data: authData,
     isLoading: loading,
     error: queryError,
   } = useQuery({
     queryKey: AUTH_QUERY_KEY,
-    queryFn: getCurrentUserWithProfile,
+    queryFn: async () => {
+      console.log('Auth query running...');
+      
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw sessionError;
+      }
+      
+      if (!session?.user) {
+        console.log('No session found');
+        return null;
+      }
+      
+      console.log('Session found for user:', session.user.id);
+      
+      // Get or create profile immediately
+      let profile = await getProfile(session.user.id);
+      
+      if (!profile) {
+        console.log('No profile found, creating one...');
+        profile = await createProfile(session.user);
+      }
+      
+      console.log('Profile ready:', profile.display_name);
+      return { user: session.user, profile };
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-    enabled: true, // Always enabled
   });
 
   // Set up auth state listener
@@ -62,11 +77,12 @@ export function useAuth(): AuthState & AuthActions {
       async (event, session) => {
         console.log('Auth state change:', event, !!session?.user);
         
-        // Invalidate auth query to refetch
-        queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
-        
-        // Clear any existing errors on successful auth
-        if (session?.user) {
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Immediately refetch to get/create profile
+          queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
+          setError(null);
+        } else if (event === 'SIGNED_OUT') {
+          queryClient.setQueryData(AUTH_QUERY_KEY, null);
           setError(null);
         }
       }
@@ -75,147 +91,140 @@ export function useAuth(): AuthState & AuthActions {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  // GitHub sign-in mutation
-  const signInWithGitHubMutation = useMutation({
-    mutationFn: authSignInWithGitHub,
-    onError: (error: Error) => {
-      setError(error.message);
-    },
-  });
+  // GitHub sign-in
+  const signInWithGitHub = async () => {
+    console.log('Starting GitHub sign in...');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        scopes: 'read:user user:email',
+      },
+    });
 
-  // Email sign-in mutation
-  const signInWithEmailMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      authSignInWithEmail(email, password),
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
-      setError(null);
-    },
-    onError: (error: Error) => {
+    if (error) {
+      console.error('GitHub OAuth error:', error);
       setError(error.message);
-    },
-  });
+      throw error;
+    }
+  };
 
-  // Email sign-up mutation
-  const signUpWithEmailMutation = useMutation({
-    mutationFn: ({ email, password, displayName }: { 
-      email: string; 
-      password: string; 
-      displayName: string; 
-    }) => authSignUpWithEmail(email, password, displayName),
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
-      setError(null);
-    },
-    onError: (error: Error) => {
-      setError(error.message);
-    },
-  });
+  // Email sign-in
+  const signInWithEmail = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  // Sign-out mutation
-  const signOutMutation = useMutation({
-    mutationFn: authSignOut,
-    onSuccess: () => {
-      queryClient.setQueryData(AUTH_QUERY_KEY, null);
-      queryClient.clear(); // Clear all cached data
-      setError(null);
-    },
-    onError: (error: Error) => {
+    if (error) {
       setError(error.message);
-    },
-  });
+      throw error;
+    }
 
-  // Update profile mutation
-  const updateProfileMutation = useMutation({
-    mutationFn: (updates: Partial<Profile>) => {
-      if (!authData?.profile) {
-        throw new Error('No profile to update');
-      }
-      return updateProfile(authData.profile.id, updates);
-    },
-    onSuccess: (updatedProfile) => {
-      // Update cached auth data
-      queryClient.setQueryData(AUTH_QUERY_KEY, (old: any) => 
-        old ? { ...old, profile: updatedProfile } : old
-      );
-      setError(null);
-    },
-    onError: (error: Error) => {
-      setError(error.message);
-    },
-  });
+    // Profile will be handled by auth state change
+    setError(null);
+  };
 
-  // Sync with GitHub mutation
-  const syncWithGitHubMutation = useMutation({
-    mutationFn: (githubUsername: string) => {
-      if (!authData?.profile) {
-        throw new Error('No profile to sync');
-      }
-      return syncWithGitHub(authData.profile.id, githubUsername);
-    },
-    onSuccess: (updatedProfile) => {
-      // Update cached auth data
-      queryClient.setQueryData(AUTH_QUERY_KEY, (old: any) => 
-        old ? { ...old, profile: updatedProfile } : old
-      );
-      setError(null);
-    },
-    onError: (error: Error) => {
+  // Email sign-up
+  const signUpWithEmail = async (email: string, password: string, displayName: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          display_name: displayName,
+        },
+      },
+    });
+
+    if (error) {
       setError(error.message);
-    },
-  });
+      throw error;
+    }
+
+    setError(null);
+  };
+
+  // Sign out
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setError(error.message);
+      throw error;
+    }
+    setError(null);
+  };
 
   const clearError = () => setError(null);
 
-  // Combine query error with mutation errors
+  // Combine query error with local errors
   const combinedError = error || (queryError instanceof Error ? queryError.message : null);
 
   return {
     user: authData?.user || null,
     profile: authData?.profile || null,
-    loading: loading || 
-             signInWithEmailMutation.isPending || 
-             signUpWithEmailMutation.isPending || 
-             signOutMutation.isPending,
+    loading,
     error: combinedError,
-    signInWithGitHub: signInWithGitHubMutation.mutateAsync,
-    signInWithEmail: (email: string, password: string) =>
-      signInWithEmailMutation.mutateAsync({ email, password }),
-    signUpWithEmail: (email: string, password: string, displayName: string) =>
-      signUpWithEmailMutation.mutateAsync({ email, password, displayName }),
-    signOut: signOutMutation.mutateAsync,
-    updateProfile: updateProfileMutation.mutateAsync,
-    syncWithGitHub: syncWithGitHubMutation.mutateAsync,
+    signInWithGitHub,
+    signInWithEmail,
+    signUpWithEmail,
+    signOut,
     clearError,
   };
 }
 
 /**
- * Hook to check if user is authenticated
+ * Get existing profile
  */
-export function useRequireAuth() {
-  const { user, loading } = useAuth();
-  return {
-    isAuthenticated: !!user,
-    loading,
-    user,
-  };
+async function getProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error getting profile:', error);
+    throw error;
+  }
+
+  return data || null;
 }
 
 /**
- * Hook for auth-dependent queries
+ * Create new profile from user data
  */
-export function useAuthQuery<T>(
-  queryKey: any[],
-  queryFn: () => Promise<T>,
-  options: any = {}
-) {
-  const { user } = useAuth();
+async function createProfile(user: User): Promise<Profile> {
+  const githubData = user.user_metadata || {};
   
-  return useQuery({
-    queryKey: ['auth-dependent', ...queryKey],
-    queryFn,
-    enabled: !!user,
-    ...options,
-  });
+  const profileData = {
+    id: user.id,
+    github_username: githubData?.user_name || null,
+    display_name: githubData?.full_name || 
+                  githubData?.name || 
+                  githubData?.user_name || 
+                  user.email?.split('@')[0] ||
+                  'User',
+    skill_level: 'beginner' as const,
+    elo_rating: 1200,
+    rating: 1200,
+    games_played: 0,
+    games_won: 0,
+  };
+
+  console.log('Creating profile:', profileData);
+
+  const { data, error } = await supabase
+    .from('users')
+    .insert(profileData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Profile creation error:', error);
+    throw error;
+  }
+
+  console.log('Profile created successfully:', data.display_name);
+  return data;
 }

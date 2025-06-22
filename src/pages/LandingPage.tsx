@@ -33,7 +33,13 @@ const LandingPage: React.FC = () => {
   const handleDuelMe = async () => {
     // Require authentication for competitive modes
     if (!user) {
-      navigate('/login');
+      try {
+        await signInWithGitHub();
+        // Auth state change will handle the redirect
+      } catch (error) {
+        console.error('Sign in failed:', error);
+        navigate('/login');
+      }
       return;
     }
     
@@ -194,27 +200,15 @@ const LandingPage: React.FC = () => {
               {/* GitHub Profile Input (only for guests) */}
               {!user && (
                 <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                    Sign in to track your progress, compete in ranked matches, and unlock all features!
-                  </p>
-                  <div className="space-y-2">
-                    <AnimatedButton
-                      onClick={() => navigate('/login')}
-                      variant="primary"
-                      size="sm"
-                      className="w-full"
-                    >
-                      Sign In
-                    </AnimatedButton>
-                    <AnimatedButton
-                      onClick={() => navigate('/signup')}
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                    >
-                      Create Account
-                    </AnimatedButton>
-                  </div>
+                  <AnimatedButton
+                    onClick={signInWithGitHub}
+                    variant="primary"
+                    size="sm"
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white"
+                  >
+                    <Github className="h-4 w-4 mr-2" />
+                    Sign in with GitHub to Play
+                  </AnimatedButton>
                 </div>
               )}
 
