@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 const AuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -24,16 +25,19 @@ const AuthCallbackPage: React.FC = () => {
         if (data.session?.user) {
           console.log('Auth callback successful, user:', data.session.user.id);
           
-          // Small delay to ensure profile creation completes
+          // Wait for profile creation to complete
           setTimeout(() => {
+            setIsProcessing(false);
             navigate('/dashboard', { replace: true });
-          }, 1000);
+          }, 2000);
         } else {
           console.log('No session found, redirecting to login');
+          setIsProcessing(false);
           navigate('/login', { replace: true });
         }
       } catch (error) {
         console.error('Auth callback error:', error);
+        setIsProcessing(false);
         navigate('/login', { replace: true });
       }
     };
@@ -41,6 +45,14 @@ const AuthCallbackPage: React.FC = () => {
     // Only run once when component mounts
     handleAuthCallback();
   }, [navigate]);
+
+  // Also listen for user changes from useAuth
+  useEffect(() => {
+    if (user && !loading && !isProcessing) {
+      console.log('User loaded in callback, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, loading, isProcessing, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">

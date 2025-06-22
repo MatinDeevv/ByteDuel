@@ -41,6 +41,7 @@ const AUTH_QUERY_KEY = ['auth'];
 export function useAuth(): AuthState & AuthActions {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [profileCreated, setProfileCreated] = useState(false);
 
   // Query for current user and profile
   const {
@@ -52,6 +53,7 @@ export function useAuth(): AuthState & AuthActions {
     queryFn: getCurrentUserWithProfile,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
+    enabled: true, // Always enabled
   });
 
   // Set up auth state listener
@@ -69,12 +71,18 @@ export function useAuth(): AuthState & AuthActions {
           
           // For SIGNED_IN events, ensure profile exists
           if (event === 'SIGNED_IN') {
+            console.log('SIGNED_IN event, ensuring profile exists...');
             try {
-              await getCurrentUserWithProfile();
+              const result = await getCurrentUserWithProfile();
+              console.log('Profile check result:', !!result?.profile);
+              setProfileCreated(true);
             } catch (error) {
               console.error('Failed to get/create profile:', error);
+              setError('Failed to set up profile');
             }
           }
+        } else {
+          setProfileCreated(false);
         }
       }
     );
@@ -180,7 +188,7 @@ export function useAuth(): AuthState & AuthActions {
   return {
     user: authData?.user || null,
     profile: authData?.profile || null,
-    loading: loading || 
+    loading: (loading && !profileCreated) || 
              signInWithEmailMutation.isPending || 
              signUpWithEmailMutation.isPending || 
              signOutMutation.isPending,

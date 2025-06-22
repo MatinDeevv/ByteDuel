@@ -119,10 +119,13 @@ export async function getCurrentUserWithProfile(): Promise<AuthResult | null> {
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
+    console.log('No user found in getCurrentUserWithProfile');
     return null;
   }
 
+  console.log('Getting profile for user:', user.id);
   const profile = await getOrCreateProfile(user);
+  console.log('Profile result:', !!profile);
   return { user, profile };
 }
 
@@ -152,6 +155,7 @@ export async function getUserProfile(userId: string): Promise<Profile | null> {
  */
 export async function getOrCreateProfile(user: User): Promise<Profile> {
   // First try to get existing profile by auth_user_id
+  console.log('Looking for existing profile for user:', user.id);
   const { data: existingProfile, error: getError } = await supabase
     .from('users')
     .select('*')
@@ -159,9 +163,11 @@ export async function getOrCreateProfile(user: User): Promise<Profile> {
     .single();
   
   if (!getError && existingProfile) {
+    console.log('Found existing profile:', existingProfile.display_name);
     return existingProfile;
   }
 
+  console.log('No existing profile found, creating new one...');
   // If no profile exists, create one
   return await createProfile(user);
 }
@@ -174,10 +180,10 @@ export async function createProfile(
   additionalData: Partial<Profile> = {}
 ): Promise<Profile> {
   const githubData = user.user_metadata || {};
+  console.log('Creating profile with GitHub data:', githubData);
   
   const profileData = {
     id: user.id, // Use auth user ID as primary key
-    email: user.email,
     display_name: additionalData.display_name || 
                   githubData?.full_name || 
                   githubData?.name || 
@@ -185,12 +191,15 @@ export async function createProfile(
                   user.email?.split('@')[0] ||
                   'User',
     github_username: githubData?.user_name,
-    avatar_url: githubData?.avatar_url,
     skill_level: 'beginner',
     elo_rating: 1200,
     rating: 1200,
+    games_played: 0,
+    games_won: 0,
     ...additionalData,
   };
+
+  console.log('Inserting profile data:', profileData);
 
   const { data, error } = await supabase
     .from('users')
@@ -199,9 +208,11 @@ export async function createProfile(
     .single();
 
   if (error) {
+    console.error('Profile creation error:', error);
     throw error;
   }
 
+  console.log('Profile created successfully:', data.display_name);
   return data;
 }
 

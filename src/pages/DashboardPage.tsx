@@ -58,6 +58,13 @@ const DashboardPage: React.FC = () => {
   const { stats: practiceStats, loading: practiceLoading } = usePracticeDashboard(profile?.id || null);
 
   const dataLoading = duelsLoading || practiceLoading;
+  
+  console.log('Dashboard render:', { 
+    hasUser: !!user, 
+    hasProfile: !!profile, 
+    dataLoading,
+    profileId: profile?.id 
+  });
 
   const handleSignOut = async () => {
     try {
@@ -92,6 +99,7 @@ const DashboardPage: React.FC = () => {
 
   // Show error if no user
   if (!user || !profile) {
+    console.log('Dashboard: No user or profile, showing auth required');
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <motion.div
@@ -107,12 +115,12 @@ const DashboardPage: React.FC = () => {
             />
           )}
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            {dataLoading ? 'Loading Dashboard...' : 'Authentication Required'}
+            {user && !profile ? 'Setting up your profile...' : 'Authentication Required'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {dataLoading ? 'Setting up your profile...' : 'Please sign in to access your dashboard.'}
+            {user && !profile ? 'Please wait while we set up your account.' : 'Please sign in to access your dashboard.'}
           </p>
-          {!dataLoading && (
+          {!user && (
             <AnimatedButton
               onClick={() => navigate('/login')}
               variant="primary"
@@ -124,6 +132,8 @@ const DashboardPage: React.FC = () => {
       </div>
     );
   }
+
+  console.log('Dashboard: Rendering main dashboard for user:', profile.display_name);
 
   return (
     <PageTransition>
