@@ -26,10 +26,10 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   subscribeWithSelector((set, get) => ({
-    // Initial state - CRITICAL: loading starts as true
+    // Initial state
     user: null,
     profile: null,
-    loading: true,
+    loading: false, // Start with false to prevent infinite loading
     error: null,
     showAuthModal: false,
     authModalMode: 'signin',
@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthState>()(
       set({ 
         user: null, 
         profile: null, 
-        loading: true, // Keep loading true during reset
+        loading: false,
         error: null,
         showAuthModal: false 
       });

@@ -63,7 +63,7 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     // Only load dashboard data if we have a profile and auth is not loading
-    if (profile && !authLoading) {
+    if (user && !authLoading) {
       console.log('Loading dashboard data for user:', profile.display_name);
       
       const loadDashboardData = async () => {
@@ -117,11 +117,11 @@ const DashboardPage: React.FC = () => {
       };
 
       loadDashboardData();
-    } else if (!authLoading && !profile) {
+    } else if (!authLoading && !user) {
       console.log('No profile found, stopping data loading');
       setDataLoading(false);
     }
-  }, [profile, authLoading]);
+  }, [user, profile, authLoading]);
 
   const handleSignOut = async () => {
     try {
@@ -177,8 +177,8 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  // Show error if no profile after auth loading is complete
-  if (!authLoading && !profile) {
+  // Show error if no user after auth loading is complete
+  if (!authLoading && !user) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <motion.div
@@ -187,16 +187,16 @@ const DashboardPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Profile Not Found
+            Authentication Required
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            We couldn't load your profile. Please try signing in again.
+            Please sign in to access your dashboard.
           </p>
           <AnimatedButton
             onClick={() => navigate('/login')}
             variant="primary"
           >
-            Sign In Again
+            Sign In
           </AnimatedButton>
         </motion.div>
       </div>

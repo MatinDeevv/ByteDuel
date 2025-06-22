@@ -438,15 +438,16 @@ export function useAuth() {
   React.useEffect(() => {
     let mounted = true;
     let subscription: any = null;
+    let initialized = false;
 
     const initializeAuth = async () => {
+      if (initialized) return;
+      initialized = true;
+      
       console.log('Initializing auth...');
       
       try {
-        // Don't set loading here if we already have a user
-        if (!user) {
-          setLoading(true);
-        }
+        setLoading(true);
         
         // Check if Supabase is available
         if (!isSupabaseAvailable()) {
@@ -532,12 +533,9 @@ export function useAuth() {
       subscription = data.subscription;
     };
 
-    // Initialize auth and set up listener
-    initializeAuth().then(() => {
-      if (mounted) {
-        setupAuthListener();
-      }
-    });
+    // Set up listener first, then initialize
+    setupAuthListener();
+    initializeAuth();
 
     return () => {
       mounted = false;
@@ -545,7 +543,7 @@ export function useAuth() {
         subscription.unsubscribe();
       }
     };
-  }, [setUser, setProfile, setLoading, setError]);
+  }, []); // Remove dependencies to prevent re-initialization
 
   // Auth action handlers with proper error handling
   const handleSignInWithGitHub = async () => {

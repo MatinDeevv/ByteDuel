@@ -26,11 +26,11 @@ const LandingPage: React.FC = () => {
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
-    if (user && profile && !loading) {
+    if (user && !loading) {
       console.log('User authenticated, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, loading, navigate]);
 
   // Show loading while checking auth
   if (loading) {
@@ -47,7 +47,7 @@ const LandingPage: React.FC = () => {
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           />
           <p className="text-gray-600 dark:text-gray-400">
-            Checking your session...
+            Loading...
           </p>
         </motion.div>
       </div>
