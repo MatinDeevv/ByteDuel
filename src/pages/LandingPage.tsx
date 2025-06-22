@@ -8,10 +8,10 @@ import ModeSelector from '../components/ModeSelector';
 import AnimatedLeaderboard from '../components/AnimatedLeaderboard';
 import MatchmakingModal from '../components/MatchmakingModal';
 import RatingDisplay from '../components/RatingDisplay';
-import AuthModal from '../components/AuthModal';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { useMatchmakingStore } from '../store/matchmakingStore';
+import { useAuthStore } from '../store/authStore';
 import { useAuth } from '../lib/auth';
 import { createDuel } from '../services/api';
 import { GameMode } from '../types';
@@ -22,9 +22,9 @@ const LandingPage: React.FC = () => {
   const [githubProfile, setGithubProfile] = useState('');
   const [selectedMode, setSelectedMode] = useState<GameMode>('ranked-duel');
   const [showMatchmaking, setShowMatchmaking] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
   const { setUserId, userRating } = useMatchmakingStore();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, error } = useAuth();
+  const { showAuthModal, setShowAuthModal } = useAuthStore();
 
   // Mock leaderboard data
   const leaderboardData = [
@@ -38,13 +38,13 @@ const LandingPage: React.FC = () => {
   const handleDuelMe = async () => {
     // Require authentication for competitive modes
     if (!user && (selectedMode === 'ranked-duel' || selectedMode === 'tournament')) {
-      setShowAuth(true);
+      setShowAuthModal(true, 'signin');
       return;
     }
     
     // Require authentication for practice mode too
     if (!user && selectedMode === 'practice') {
-      setShowAuth(true);
+      setShowAuthModal(true, 'signin');
       return;
     }
     
@@ -134,7 +134,7 @@ const LandingPage: React.FC = () => {
               <AnimatedButton 
                 variant="outline" 
                 size="sm"
-                onClick={() => setShowAuth(true)}
+                onClick={() => setShowAuthModal(true, 'signin')}
               >
                 Sign In
               </AnimatedButton>
@@ -326,12 +326,6 @@ const LandingPage: React.FC = () => {
       <MatchmakingModal 
         isOpen={showMatchmaking} 
         onClose={() => setShowMatchmaking(false)} 
-      />
-      
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuth}
-        onClose={() => setShowAuth(false)}
       />
       </div>
     </PageTransition>

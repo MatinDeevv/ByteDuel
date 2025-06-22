@@ -5,6 +5,7 @@ import React from 'react';
 import Cookies from 'js-cookie';
 import { supabase, isSupabaseAvailable } from './supabaseClient';
 import { User } from '@supabase/supabase-js';
+import { useAuthStore } from '../store/authStore';
 
 export interface UserProfile {
   id: string;
@@ -34,8 +35,8 @@ export interface GitHubProfile {
 
 // Cookie configuration
 const COOKIE_OPTIONS = {
-  secure: true,
-  sameSite: 'strict' as const,
+  secure: window.location.protocol === 'https:',
+  sameSite: 'lax' as const,
   expires: 7, // 7 days
 };
 
@@ -71,13 +72,14 @@ export function clearAuthTokens(): void {
 /**
  * Parse OAuth tokens from URL fragment
  */
-export function parseAuthFragment(): { accessToken: string | null; refreshToken: string | null } {
+export function parseAuthFragment(): { accessToken: string | null; refreshToken: string | null; error?: string } {
   const fragment = window.location.hash.substring(1);
   const params = new URLSearchParams(fragment);
   
   return {
     accessToken: params.get('access_token'),
     refreshToken: params.get('refresh_token'),
+    error: params.get('error_description') || params.get('error'),
   };
 }
 
@@ -114,7 +116,7 @@ export async function signInWithGitHub(): Promise<void> {
 /**
  * Sign in with email and password
  */
-export async function signInWithEmail(email: string, password: string): Promise<void> {
+export async function signInWithEmail(email: string, password: string): Promise<{ user: User; profile: UserProfile }> {
   if (!isSupabaseAvailable()) {
     throw new Error('Authentication service is not available. Please check configuration.');
   }
@@ -128,10 +130,24 @@ export async function signInWithEmail(email: string, password: string): Promise<
     throw new Error(`Email sign-in failed: ${error.message}`);
   }
 
+  if (!data.user) {
+    throw new Error('Sign-in failed: No user returned');
+  }
+
   // Store tokens in cookies
   if (data.session) {
     storeAuthTokens(data.session.access_token, data.session.refresh_token);
   }
+
+  // Fetch user profile
+  const profile = await getUserProfile(data.user.id);
+  if (!profile) {
+    // Create profile if it doesn't exist
+    const newProfile = await createUserProfile(data.user);
+    return { user: data.user, profile: newProfile };
+  }
+
+  return { user: data.user, profile };
 }
 
 /**
@@ -141,7 +157,7 @@ export async function signUpWithEmail(
   email: string, 
   password: string, 
   displayName: string
-): Promise<void> {
+): Promise<{ user: User; profile: UserProfile }> {
   if (!isSupabaseAvailable()) {
     throw new Error('Authentication service is not available. Please check configuration.');
   }
@@ -160,15 +176,19 @@ export async function signUpWithEmail(
     throw new Error(`Email sign-up failed: ${error.message}`);
   }
 
+  if (!data.user) {
+    throw new Error('Sign-up failed: No user returned');
+  }
+
   // Store tokens in cookies if session exists
   if (data.session) {
     storeAuthTokens(data.session.access_token, data.session.refresh_token);
   }
 
   // Create user profile
-  if (data.user) {
-    await createUserProfile(data.user, { display_name: displayName });
-  }
+  const profile = await createUserProfile(data.user, { display_name: displayName });
+  
+  return { user: data.user, profile };
 }
 
 /**
@@ -180,7 +200,8 @@ export async function signOut(): Promise<void> {
   if (isSupabaseAvailable()) {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      throw new Error(`Sign-out failed: ${error.message}`);
+      console.error('Sign-out error:', error);
+      // Don't throw error for sign-out failures
     }
   }
 }
@@ -353,74 +374,231 @@ export async function syncWithGitHub(userId: string, githubUsername: string): Pr
 }
 
 /**
- * Check if user is authenticated
+ * Main auth hook with comprehensive state management
  */
 export function useAuth() {
-  const [user, setUser] = React.useState<User | null>(null);
-  const [profile, setProfile] = React.useState<UserProfile | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const {
+    user,
+    profile,
+    loading,
+    error,
+    setUser,
+    setProfile,
+    setLoading,
+    setError,
+    clearError,
+    reset,
+  } = useAuthStore();
 
   React.useEffect(() => {
-    // Check if Supabase is available
-    if (!isSupabaseAvailable()) {
-      setError('Authentication service is not configured properly.');
-      setLoading(false);
-      return;
-    }
+    let mounted = true;
 
-    // Get initial session
-    getCurrentUser().then((currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        getUserProfile(currentUser.id).then(setProfile);
+    const initializeAuth = async () => {
+      try {
+        // Check if Supabase is available
+        if (!isSupabaseAvailable()) {
+          setError('Authentication service is not configured properly.');
+          setLoading(false);
+          return;
+        }
+
+        // Get initial session
+        const currentUser = await getCurrentUser();
+        
+        if (!mounted) return;
+
+        if (currentUser) {
+          setUser(currentUser);
+          
+          // Fetch user profile
+          const userProfile = await getUserProfile(currentUser.id);
+          if (!mounted) return;
+          
+          if (!userProfile) {
+            // Create profile for new users
+            try {
+              const newProfile = await createUserProfile(currentUser);
+              if (mounted) {
+                setProfile(newProfile);
+              }
+            } catch (profileError) {
+              console.error('Failed to create user profile:', profileError);
+              if (mounted) {
+                setError('Failed to set up user profile. Please try again.');
+              }
+            }
+          } else {
+            setProfile(userProfile);
+          }
+        }
+      } catch (initError) {
+        console.error('Auth initialization error:', initError);
+        if (mounted) {
+          setError('Failed to initialize authentication. Please refresh the page.');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Store tokens in cookies
-          storeAuthTokens(session.access_token, session.refresh_token);
-          
-          const userProfile = await getUserProfile(session.user.id);
-          if (!userProfile) {
-            // Create profile for new users
-            const newProfile = await createUserProfile(session.user);
-            setProfile(newProfile);
+        if (!mounted) return;
+
+        console.log('Auth state change:', event, session?.user?.id);
+
+        try {
+          if (session?.user) {
+            // Store tokens in cookies
+            storeAuthTokens(session.access_token, session.refresh_token);
+            
+            setUser(session.user);
+            
+            // Fetch or create user profile
+            let userProfile = await getUserProfile(session.user.id);
+            
+            if (!userProfile) {
+              // Create profile for new users
+              userProfile = await createUserProfile(session.user);
+            }
+            
+            if (mounted) {
+              setProfile(userProfile);
+            }
           } else {
-            setProfile(userProfile);
+            // Clear tokens on sign out
+            clearAuthTokens();
+            if (mounted) {
+              setUser(null);
+              setProfile(null);
+            }
           }
-        } else {
-          // Clear tokens on sign out
-          clearAuthTokens();
-          setProfile(null);
+        } catch (authError) {
+          console.error('Auth state change error:', authError);
+          if (mounted) {
+            setError('Authentication error occurred. Please try signing in again.');
+          }
+        } finally {
+          if (mounted) {
+            setLoading(false);
+          }
         }
-        
-        setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [setUser, setProfile, setLoading, setError]);
+
+  // Auth action handlers with proper error handling
+  const handleSignInWithGitHub = async () => {
+    try {
+      clearError();
+      setLoading(true);
+      await signInWithGitHub();
+      // Don't set loading to false here - let the auth callback handle it
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'GitHub sign-in failed');
+      setLoading(false);
+      throw err;
+    }
+  };
+
+  const handleSignInWithEmail = async (email: string, password: string) => {
+    try {
+      clearError();
+      setLoading(true);
+      const { user: authUser, profile: userProfile } = await signInWithEmail(email, password);
+      setUser(authUser);
+      setProfile(userProfile);
+      return { user: authUser, profile: userProfile };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Email sign-in failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUpWithEmail = async (email: string, password: string, displayName: string) => {
+    try {
+      clearError();
+      setLoading(true);
+      const { user: authUser, profile: userProfile } = await signUpWithEmail(email, password, displayName);
+      setUser(authUser);
+      setProfile(userProfile);
+      return { user: authUser, profile: userProfile };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Email sign-up failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      clearError();
+      await signOut();
+      reset();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign-out failed');
+      throw err;
+    }
+  };
+
+  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
+    
+    try {
+      clearError();
+      const updatedProfile = await updateUserProfile(user.id, updates);
+      setProfile(updatedProfile);
+      return updatedProfile;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Profile update failed');
+      throw err;
+    }
+  };
+
+  const handleSyncWithGitHub = async (githubUsername: string) => {
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
+    
+    try {
+      clearError();
+      const updatedProfile = await syncWithGitHub(user.id, githubUsername);
+      setProfile(updatedProfile);
+      return updatedProfile;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'GitHub sync failed');
+      throw err;
+    }
+  };
 
   return {
     user,
     profile,
     loading,
     error,
-    signInWithGitHub,
-    signInWithEmail,
-    signUpWithEmail,
-    signOut,
-    updateProfile: (updates: Partial<UserProfile>) => 
-      user ? updateUserProfile(user.id, updates) : Promise.reject('Not authenticated'),
-    syncWithGitHub: (githubUsername: string) =>
-      user ? syncWithGitHub(user.id, githubUsername) : Promise.reject('Not authenticated'),
+    isAuthenticated: !!user,
+    signInWithGitHub: handleSignInWithGitHub,
+    signInWithEmail: handleSignInWithEmail,
+    signUpWithEmail: handleSignUpWithEmail,
+    signOut: handleSignOut,
+    updateProfile: handleUpdateProfile,
+    syncWithGitHub: handleSyncWithGitHub,
+    clearError,
   };
 }
 
@@ -428,7 +606,7 @@ export function useAuth() {
  * Hook to require authentication
  */
 export function useRequireAuth() {
-  const { user, loading } = useAuth();
+  const { user, loading, error } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
@@ -440,6 +618,7 @@ export function useRequireAuth() {
   return {
     isAuthenticated,
     loading,
+    error,
     user,
   };
 }
