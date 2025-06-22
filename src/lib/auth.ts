@@ -1,5 +1,5 @@
 /**
- * Authentication Service - Handle GitHub OAuth and email/password auth with secure cookie storage
+ * Enhanced Authentication Service with fastest-path login flow
  */
 import React from 'react';
 import Cookies from 'js-cookie';
@@ -93,7 +93,7 @@ export function clearUrlFragment(): void {
 }
 
 /**
- * Sign in with GitHub OAuth
+ * Sign in with GitHub OAuth - fastest path
  */
 export async function signInWithGitHub(): Promise<void> {
   if (!isSupabaseAvailable()) {
@@ -114,7 +114,7 @@ export async function signInWithGitHub(): Promise<void> {
 }
 
 /**
- * Sign in with email and password
+ * Sign in with email and password - fallback
  */
 export async function signInWithEmail(email: string, password: string): Promise<{ user: User; profile: UserProfile }> {
   if (!isSupabaseAvailable()) {
@@ -139,7 +139,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
     storeAuthTokens(data.session.access_token, data.session.refresh_token);
   }
 
-  // Fetch user profile
+  // Fetch user profile in one combined query
   const profile = await getUserProfile(data.user.id);
   if (!profile) {
     // Create profile if it doesn't exist
@@ -207,43 +207,65 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Get current user session
+ * Get current user session with combined profile query
  */
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUserWithProfile(): Promise<{ user: User; profile: UserProfile } | null> {
   if (!isSupabaseAvailable()) {
     return null;
   }
 
-  // Try to get session from Supabase first
-  const { data: { user } } = await supabase.auth.getUser();
+  // Get session from Supabase
+  const { data: { session }, error } = await supabase.auth.getSession();
   
-  if (user) {
-    return user;
-  }
+  if (error || !session?.user) {
+    // Try to restore from cookies
+    const { accessToken, refreshToken } = getAuthTokens();
+    
+    if (accessToken && refreshToken) {
+      try {
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
 
-  // If no session, try to restore from cookies
-  const { accessToken, refreshToken } = getAuthTokens();
-  
-  if (accessToken && refreshToken) {
-    try {
-      const { data, error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
+        if (sessionError || !data.user) {
+          clearAuthTokens();
+          return null;
+        }
 
-      if (error) {
+        // Get profile for restored session
+        const profile = await getUserProfile(data.user.id);
+        if (!profile) {
+          const newProfile = await createUserProfile(data.user);
+          return { user: data.user, profile: newProfile };
+        }
+
+        return { user: data.user, profile };
+      } catch (error) {
         clearAuthTokens();
         return null;
       }
-
-      return data.user;
-    } catch (error) {
-      clearAuthTokens();
-      return null;
     }
+    
+    return null;
   }
 
-  return null;
+  // Get profile for current session
+  const profile = await getUserProfile(session.user.id);
+  if (!profile) {
+    const newProfile = await createUserProfile(session.user);
+    return { user: session.user, profile: newProfile };
+  }
+
+  return { user: session.user, profile };
+}
+
+/**
+ * Get current user session
+ */
+export async function getCurrentUser(): Promise<User | null> {
+  const result = await getCurrentUserWithProfile();
+  return result?.user || null;
 }
 
 /**
@@ -374,7 +396,7 @@ export async function syncWithGitHub(userId: string, githubUsername: string): Pr
 }
 
 /**
- * Main auth hook with comprehensive state management
+ * Enhanced auth hook with onAuthStateChange listener
  */
 export function useAuth() {
   const {
@@ -395,6 +417,8 @@ export function useAuth() {
 
     const initializeAuth = async () => {
       try {
+        setLoading(true);
+        
         // Check if Supabase is available
         if (!isSupabaseAvailable()) {
           setError('Authentication service is not configured properly.');
@@ -402,34 +426,14 @@ export function useAuth() {
           return;
         }
 
-        // Get initial session
-        const currentUser = await getCurrentUser();
+        // Get initial session with profile in one call
+        const result = await getCurrentUserWithProfile();
         
         if (!mounted) return;
 
-        if (currentUser) {
-          setUser(currentUser);
-          
-          // Fetch user profile
-          const userProfile = await getUserProfile(currentUser.id);
-          if (!mounted) return;
-          
-          if (!userProfile) {
-            // Create profile for new users
-            try {
-              const newProfile = await createUserProfile(currentUser);
-              if (mounted) {
-                setProfile(newProfile);
-              }
-            } catch (profileError) {
-              console.error('Failed to create user profile:', profileError);
-              if (mounted) {
-                setError('Failed to set up user profile. Please try again.');
-              }
-            }
-          } else {
-            setProfile(userProfile);
-          }
+        if (result) {
+          setUser(result.user);
+          setProfile(result.profile);
         }
       } catch (initError) {
         console.error('Auth initialization error:', initError);
@@ -445,7 +449,7 @@ export function useAuth() {
 
     initializeAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes with onAuthStateChange
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;

@@ -11,7 +11,6 @@ import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { useMatchmakingStore } from '../store/matchmakingStore';
-import { useAuthStore } from '../store/authStore';
 import { useAuth } from '../lib/auth';
 import { createDuel } from '../services/api';
 import { GameMode } from '../types';
@@ -24,7 +23,6 @@ const LandingPage: React.FC = () => {
   const [showMatchmaking, setShowMatchmaking] = useState(false);
   const { setUserId, userRating } = useMatchmakingStore();
   const { user, profile, signOut, error } = useAuth();
-  const { showAuthModal, setShowAuthModal } = useAuthStore();
 
   // Mock leaderboard data
   const leaderboardData = [
@@ -38,13 +36,13 @@ const LandingPage: React.FC = () => {
   const handleDuelMe = async () => {
     // Require authentication for competitive modes
     if (!user && (selectedMode === 'ranked-duel' || selectedMode === 'tournament')) {
-      setShowAuthModal(true, 'signin');
+      navigate('/login');
       return;
     }
     
     // Require authentication for practice mode too
     if (!user && selectedMode === 'practice') {
-      setShowAuthModal(true, 'signin');
+      navigate('/login');
       return;
     }
     
@@ -116,10 +114,10 @@ const LandingPage: React.FC = () => {
                 <AnimatedButton
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate('/dashboard')}
                 >
                   <User className="h-4 w-4 mr-1" />
-                  Profile
+                  Dashboard
                 </AnimatedButton>
                 <AnimatedButton
                   variant="outline"
@@ -131,13 +129,22 @@ const LandingPage: React.FC = () => {
                 </AnimatedButton>
               </div>
             ) : (
-              <AnimatedButton 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowAuthModal(true, 'signin')}
-              >
-                Sign In
-              </AnimatedButton>
+              <div className="flex items-center space-x-3">
+                <AnimatedButton 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate('/login')}
+                >
+                  Sign In
+                </AnimatedButton>
+                <AnimatedButton 
+                  variant="primary" 
+                  size="sm"
+                  onClick={() => navigate('/signup')}
+                >
+                  Sign Up
+                </AnimatedButton>
+              </div>
             )}
           </nav>
           <div className="md:hidden">
