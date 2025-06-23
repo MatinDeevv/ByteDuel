@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Zap } from 'lucide-react';
 import AnimatedButton from '../components/AnimatedButton';
-import GameLobby from '../components/GameLobby';
+import StandardizedLobby from '../components/StandardizedLobby';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { useAuth } from '../hooks/useAuth';
@@ -38,10 +38,10 @@ const LobbyPage: React.FC = () => {
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                     Game Lobby
-                  </h1>
+                  Level 1 Game Lobby
                   <p className="text-gray-600 dark:text-gray-400">
                     Join or host coding duels with players worldwide
-                  </p>
+                  Join or host Level 1 coding challenges with players worldwide
                 </div>
               </div>
             </div>
@@ -92,7 +92,7 @@ const LobbyPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <GameLobby />
+            <StandardizedLobby />
           </motion.div>
         </main>
       </div>
