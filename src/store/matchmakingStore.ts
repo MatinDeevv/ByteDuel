@@ -115,6 +115,11 @@ export const useMatchmakingStore = create<MatchmakingStore>((set, get) => ({
                 queuePosition: undefined,
                 estimatedWaitTime: undefined,
               });
+              
+              // Auto-navigate to duel after a short delay to show match found animation
+              setTimeout(() => {
+                window.location.href = `/duel/${activeDuel.id}`;
+              }, 2000);
             }
           }
         } catch (error) {

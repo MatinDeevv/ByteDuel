@@ -46,12 +46,31 @@ const DuelPage: React.FC = () => {
       if (!id) return;
       
       try {
-        const data = await joinDuel(id);
+        // For active duels, we don't need to "join" - just load the data
+        const { data: duel, error } = await supabase
+          .from('duels')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        const data = {
+          prompt: duel.prompt,
+          tests: duel.test_cases,
+          timeLimit: duel.time_limit,
+        };
+        
         setDuelData(data);
         setTimeLeft(data.timeLimit || 900);
+        
+        console.log('🎮 Loaded duel data:', { id, prompt: data.prompt.slice(0, 100) + '...' });
       } catch (error) {
         console.error('Failed to load duel:', error);
-        navigate('/');
+        // Don't navigate away immediately, show error message
+        alert('Failed to load duel. Please try again.');
       }
     };
 

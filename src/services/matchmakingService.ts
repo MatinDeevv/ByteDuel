@@ -290,6 +290,7 @@ export async function processMatchmaking(): Promise<number> {
             matchesCreated++;
 
             console.log(`🎉 Instant match created! Duel ID: ${duelId}`);
+            console.log(`🚀 Players should navigate to: /duel/${duelId}`);
           } catch (error) {
             console.error('💥 Failed to create instant match:', error);
           }
@@ -334,6 +335,7 @@ export async function processMatchmaking(): Promise<number> {
             matchesCreated++;
 
             console.log(`🎉 Close match created! Duel ID: ${duelId}`);
+            console.log(`🚀 Players should navigate to: /duel/${duelId}`);
           } catch (error) {
             console.error('💥 Failed to create close match:', error);
           }
@@ -385,6 +387,7 @@ export async function processMatchmaking(): Promise<number> {
               matchesCreated++;
 
               console.log(`🎉 Wide match created! Duel ID: ${duelId}`);
+              console.log(`🚀 Players should navigate to: /duel/${duelId}`);
             } catch (error) {
               console.error('💥 Failed to create wide match:', error);
             }

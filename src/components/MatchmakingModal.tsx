@@ -77,6 +77,17 @@ const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onClose }) 
     navigate(`/duel/${currentMatch.duelId}?mode=ranked`);
   };
 
+  // Auto-accept match after finding one
+  useEffect(() => {
+    if (currentMatch) {
+      const timeout = setTimeout(() => {
+        handleAcceptMatch();
+      }, 3000); // 3 second delay to show match found
+
+      return () => clearTimeout(timeout);
+    }
+  }, [currentMatch]);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;

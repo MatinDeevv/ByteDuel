@@ -44,6 +44,8 @@ export interface SubmitPracticeResponse {
  * Join a duel (legacy compatibility)
  */
 export async function joinDuel(duelId: string): Promise<JoinDuelResponse> {
+  console.log('🎮 Loading duel data for:', duelId);
+  
   const { data: duel, error } = await supabase
     .from('duels')
     .select('*')
@@ -51,9 +53,11 @@ export async function joinDuel(duelId: string): Promise<JoinDuelResponse> {
     .single();
 
   if (error) {
+    console.error('Failed to load duel:', error);
     throw new Error(`Failed to join duel: ${error.message}`);
   }
 
+  console.log('✅ Duel data loaded successfully');
   return {
     prompt: duel.prompt,
     tests: duel.test_cases,
