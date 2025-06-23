@@ -38,10 +38,10 @@ const LobbyPage: React.FC = () => {
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                     Game Lobby
-                  Level 1 Game Lobby
+                  </h1>
                   <p className="text-gray-600 dark:text-gray-400">
                     Join or host coding duels with players worldwide
-                  Join or host Level 1 coding challenges with players worldwide
+                  </p>
                 </div>
               </div>
             </div>
