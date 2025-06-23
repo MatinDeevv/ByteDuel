@@ -14,7 +14,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { joinDuel, submitDuel } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { useFastMatchmakingStore } from '../store/fastMatchmakingStore';
+import { useFastMatchmakingStore } from '../../store/fastMatchmakingStore';
 import { useKeystrokeStore } from '../store/keystrokeStore';
 import { codeExecutionService, type ExecutionResult } from '../services/codeExecutionService';
 import { supabase } from '../lib/supabaseClient';
