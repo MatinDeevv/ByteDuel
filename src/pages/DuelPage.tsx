@@ -46,9 +46,9 @@ const DuelPage: React.FC = () => {
     const cleanupQueue = async () => {
       if (user?.id) {
         try {
-          // Remove user from queue since they're now in a duel
-          const { leaveMatchmakingQueue } = await import('../services/matchmakingService');
-          await leaveMatchmakingQueue(user.id);
+          // Remove user from queue since they're now in a duel using the store
+          const { cancelSearch } = useMatchmakingStore.getState();
+          cancelSearch();
           console.log('🧹 Cleaned up user from queue on duel page load');
         } catch (error) {
           // Ignore errors - user might not be in queue
