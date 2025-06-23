@@ -1,11 +1,23 @@
 {
   "rewrites": [
     {
+      "source": "/404",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/error",
+      "destination": "/index.html"
+    },
+    {
       "source": "/auth/callback",
       "destination": "/index.html"
     },
     {
       "source": "/auth/callback/:rest*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]

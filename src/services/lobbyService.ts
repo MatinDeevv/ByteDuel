@@ -39,8 +39,43 @@ export async function getAllLobbies(): Promise<GameLobby[]> {
   try {
     console.log('🔍 Fetching all available lobbies...');
     
-    // Use the database function for better performance and consistency
-    const { data: lobbies, error } = await supabase.rpc('get_lobbies_with_host_info');
+    // First try the database function, fallback to direct query if it fails
+    let lobbies, error;
+    
+    try {
+      const result = await supabase.rpc('get_lobbies_with_host_info');
+      lobbies = result.data;
+      error = result.error;
+    } catch (rpcError) {
+      console.warn('RPC function failed, falling back to direct query:', rpcError);
+      
+      // Fallback to direct query
+      const result = await supabase
+        .from('game_lobbies')
+        .select(`
+          id,
+          host_id,
+          player_ids,
+          current_players,
+          max_players,
+          status,
+          settings,
+          created_at,
+          expires_at,
+          duel_id,
+          users!host_id (
+            display_name,
+            elo_rating,
+            avatar_url
+          )
+        `)
+        .in('status', ['waiting', 'starting'])
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
+      
+      lobbies = result.data;
+      error = result.error;
+    }
 
     if (error) {
       console.error('❌ Supabase query error:', error);
@@ -49,21 +84,26 @@ export async function getAllLobbies(): Promise<GameLobby[]> {
 
     console.log(`✅ Found ${lobbies?.length || 0} lobbies`);
 
-    return (lobbies || []).map((lobby: any) => ({
-      id: lobby.id,
-      host_id: lobby.host_id,
-      host_name: lobby.host_name || 'Unknown',
-      host_rating: lobby.host_rating || 1200,
-      host_avatar: lobby.host_avatar,
-      player_ids: lobby.player_ids || [],
-      current_players: lobby.current_players,
-      max_players: lobby.max_players,
-      status: lobby.status,
-      created_at: lobby.created_at,
-      expires_at: lobby.expires_at,
-      settings: lobby.settings || { level: 1, timeLimit: 900, mode: 'ranked' },
-      duel_id: lobby.duel_id,
-    }));
+    return (lobbies || []).map((lobby: any) => {
+      // Handle both RPC function result and direct query result
+      const hostInfo = lobby.users || lobby;
+      
+      return {
+        id: lobby.id,
+        host_id: lobby.host_id,
+        host_name: lobby.host_name || hostInfo?.display_name || 'Unknown',
+        host_rating: lobby.host_rating || hostInfo?.elo_rating || 1200,
+        host_avatar: lobby.host_avatar || hostInfo?.avatar_url,
+        player_ids: lobby.player_ids || [],
+        current_players: lobby.current_players,
+        max_players: lobby.max_players,
+        status: lobby.status,
+        created_at: lobby.created_at,
+        expires_at: lobby.expires_at,
+        settings: lobby.settings || { level: 1, timeLimit: 900, mode: 'ranked' },
+        duel_id: lobby.duel_id,
+      };
+    });
   } catch (error) {
     console.error('❌ Failed to fetch lobbies:', error);
     return [];
@@ -154,11 +194,66 @@ export async function joinLobby(lobbyId: string): Promise<JoinLobbyResult> {
   }
 
   try {
-    // Use the database function to join lobby
-    const { data: result, error } = await supabase.rpc('join_lobby', {
-      lobby_id: lobbyId,
-      player_id: user.id,
-    });
+    // Try the database function first, fallback to manual process if it fails
+    let result, error;
+    
+    try {
+      const rpcResult = await supabase.rpc('join_lobby', {
+        lobby_id: lobbyId,
+        player_id: user.id,
+      });
+      result = rpcResult.data;
+      error = rpcResult.error;
+    } catch (rpcError) {
+      console.warn('RPC join_lobby failed, falling back to manual process:', rpcError);
+      
+      // Manual fallback process
+      const { data: lobby, error: fetchError } = await supabase
+        .from('game_lobbies')
+        .select('*')
+        .eq('id', lobbyId)
+        .single();
+      
+      if (fetchError) {
+        return { success: false, error: 'Lobby not found' };
+      }
+      
+      if (lobby.status !== 'waiting') {
+        return { success: false, error: 'Lobby is not accepting players' };
+      }
+      
+      if (lobby.current_players >= lobby.max_players) {
+        return { success: false, error: 'Lobby is full' };
+      }
+      
+      if (lobby.host_id === user.id) {
+        return { success: false, error: 'Cannot join your own lobby' };
+      }
+      
+      // Update lobby manually
+      const newPlayerIds = [...(lobby.player_ids || []), user.id];
+      const newPlayerCount = lobby.current_players + 1;
+      
+      const { error: updateError } = await supabase
+        .from('game_lobbies')
+        .update({
+          player_ids: newPlayerIds,
+          current_players: newPlayerCount,
+          status: newPlayerCount >= lobby.max_players ? 'starting' : 'waiting'
+        })
+        .eq('id', lobbyId);
+      
+      if (updateError) {
+        return { success: false, error: 'Failed to join lobby' };
+      }
+      
+      result = {
+        success: true,
+        lobby_id: lobbyId,
+        status: newPlayerCount >= lobby.max_players ? 'starting' : 'waiting'
+      };
+      error = null;
+    }
 
     if (error) {
       console.error('❌ Join lobby error:', error);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Send, Zap, CheckCircle } from 'lucide-react';
+import { useErrorHandler } from '../hooks/useErrorHandler';
 import Editor from '@monaco-editor/react';
 import AnimatedButton from '../components/AnimatedButton';
 import AnimatedCard from '../components/AnimatedCard';
@@ -27,6 +28,7 @@ interface DuelData {
 const DuelPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { handleError } = useErrorHandler();
   const [duelData, setDuelData] = useState<DuelData | null>(null);
   const [code, setCode] = useState('// Your solution here\nfunction solve() {\n  \n}');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +75,12 @@ const DuelPage: React.FC = () => {
           .single();
 
         if (error) {
+          console.error('Failed to load duel:', error);
+          if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+            // Duel not found, redirect to home
+            handleError('Duel not found', { redirectToHome: true, showAlert: true });
+            return;
+          }
           throw error;
         }
 
@@ -87,14 +95,15 @@ const DuelPage: React.FC = () => {
         
         console.log('🎮 Loaded duel data:', { id, prompt: data.prompt.slice(0, 100) + '...' });
       } catch (error) {
-        console.error('Failed to load duel:', error);
-        // Don't navigate away immediately, show error message
-        alert('Failed to load duel. Please try again.');
+        handleError(error as Error, { 
+          redirectToHome: true, 
+          showAlert: true 
+        });
       }
     };
 
     loadDuel();
-  }, [id, navigate]);
+  }, [id, navigate, handleError]);
 
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {

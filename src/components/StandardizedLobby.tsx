@@ -22,6 +22,7 @@ import RatingDisplay from './RatingDisplay';
 import { useAuth } from '../hooks/useAuth';
 import { getAllLobbies, createLobby, joinLobby, leaveLobby, cleanupExpiredLobbies, type GameLobby } from '../services/lobbyService';
 import { getRatingTier } from '../lib/elo';
+import { useErrorHandler } from '../hooks/useErrorHandler';
 
 interface StandardizedLobbyProps {
   className?: string;
@@ -30,6 +31,7 @@ interface StandardizedLobbyProps {
 const StandardizedLobby: React.FC<StandardizedLobbyProps> = ({ className = '' }) => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const { handleError } = useErrorHandler();
   
   const [lobbies, setLobbies] = useState<GameLobby[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,11 @@ const StandardizedLobby: React.FC<StandardizedLobbyProps> = ({ className = '' })
       const lobbyList = await getAllLobbies();
       setLobbies(lobbyList);
     } catch (error) {
-      console.error('Failed to load lobbies:', error);
+      handleError(error as Error, { 
+        redirectToHome: false, 
+        showAlert: false, 
+        logError: true 
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -86,11 +92,11 @@ const StandardizedLobby: React.FC<StandardizedLobbyProps> = ({ className = '' })
       } else {
         const errorMsg = result.error || 'Failed to join lobby';
         console.error('❌ Join failed:', errorMsg);
-        alert(errorMsg);
+        handleError(errorMsg, { redirectToHome: false, showAlert: true });
       }
     } catch (error) {
       console.error('💥 Exception joining lobby:', error);
-      alert(`Failed to join lobby: ${error instanceof Error ? error.message : 'Network error'}`);
+      handleError(error as Error, { redirectToHome: false, showAlert: true });
     } finally {
       setJoiningLobby(null);
     }
@@ -105,11 +111,11 @@ const StandardizedLobby: React.FC<StandardizedLobbyProps> = ({ className = '' })
         loadLobbies(); // Refresh the list
       } else {
         console.error('❌ Failed to leave lobby');
-        alert('Failed to leave lobby');
+        handleError('Failed to leave lobby', { redirectToHome: false, showAlert: true });
       }
     } catch (error) {
       console.error('Failed to leave lobby:', error);
-      alert(`Failed to leave lobby: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      handleError(error as Error, { redirectToHome: false, showAlert: true });
     }
   };
 

@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryProvider } from './components/QueryProvider';
+import ErrorBoundary from './components/ErrorBoundary';
+import NotFound from './components/NotFound';
 import App from './App.tsx';
 import LandingPage from './pages/LandingPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
@@ -17,43 +19,52 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<App />}>
-            <Route index element={<LandingPage />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="signup" element={<SignupPage />} />
-            <Route path="auth/callback" element={<AuthCallbackPage />} />
-            <Route path="lobby" element={
-              <RequireAuth>
-                <LobbyPage />
-              </RequireAuth>
-            } />
-            <Route path="dashboard" element={
-              <RequireAuth>
-                <DashboardPage />
-              </RequireAuth>
-            } />
-            <Route path="duel/:id" element={
-              <RequireAuth>
-                <DuelPage />
-              </RequireAuth>
-            } />
-            <Route path="practice" element={
-              <RequireAuth>
-                <PracticePage />
-              </RequireAuth>
-            } />
-            <Route path="profile" element={
-              <RequireAuth>
-                <ProfilePage />
-              </RequireAuth>
-            } />
-            <Route path="profile/:userId" element={<ProfilePage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </QueryProvider>
+    <ErrorBoundary>
+      <QueryProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<App />}>
+              <Route index element={<LandingPage />} />
+              <Route path="login" element={<LoginPage />} />
+              <Route path="signup" element={<SignupPage />} />
+              <Route path="auth/callback" element={<AuthCallbackPage />} />
+              <Route path="lobby" element={
+                <RequireAuth>
+                  <LobbyPage />
+                </RequireAuth>
+              } />
+              <Route path="dashboard" element={
+                <RequireAuth>
+                  <DashboardPage />
+                </RequireAuth>
+              } />
+              <Route path="duel/:id" element={
+                <RequireAuth>
+                  <DuelPage />
+                </RequireAuth>
+              } />
+              <Route path="practice" element={
+                <RequireAuth>
+                  <PracticePage />
+                </RequireAuth>
+              } />
+              <Route path="profile" element={
+                <RequireAuth>
+                  <ProfilePage />
+                </RequireAuth>
+              } />
+              <Route path="profile/:userId" element={<ProfilePage />} />
+              {/* Catch all 404 routes */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </QueryProvider>
+    </ErrorBoundary>
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </QueryProvider>
+    </ErrorBoundary>
   </StrictMode>
 );
