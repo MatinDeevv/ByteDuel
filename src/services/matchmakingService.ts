@@ -89,22 +89,25 @@ export async function findOpponents(
     `)
     .eq('mode', mode)
     .neq('user_id', userId)
-    .gte('user.elo_rating', userRating - ratingRange)
-    .lte('user.elo_rating', userRating + ratingRange)
     .order('queued_at', { ascending: true });
 
   if (error) {
     throw new Error(`Failed to find opponents: ${error.message}`);
   }
 
-  // Transform the data
-  const opponents: MatchmakingCandidate[] = (candidates || []).map((candidate: any) => ({
-    user_id: candidate.user_id,
-    display_name: candidate.user?.display_name || 'Unknown',
-    elo_rating: candidate.user?.elo_rating || 1200,
-    queued_at: candidate.queued_at,
-    mode: candidate.mode,
-  }));
+  // Transform and filter the data
+  const opponents: MatchmakingCandidate[] = (candidates || [])
+    .map((candidate: any) => ({
+      user_id: candidate.user_id,
+      display_name: candidate.user?.display_name || 'Unknown',
+      elo_rating: candidate.user?.elo_rating || 1200,
+      queued_at: candidate.queued_at,
+      mode: candidate.mode,
+    }))
+    .filter(opponent => {
+      const ratingDiff = Math.abs(opponent.elo_rating - userRating);
+      return ratingDiff <= ratingRange;
+    });
 
   console.log(`🎯 Found ${opponents.length} potential opponents:`, opponents);
   return opponents;
@@ -278,4 +281,29 @@ export async function getQueueStatus(userId: string): Promise<{
     position,
     estimatedWaitTime,
   };
+}
+
+/**
+ * Add demo users to queue for testing
+ */
+export async function addDemoUsersToQueue(): Promise<void> {
+  console.log('🎭 Adding demo users to queue for testing...');
+  
+  const demoUsers = [
+    '550e8400-e29b-41d4-a716-446655440001',
+    '550e8400-e29b-41d4-a716-446655440002',
+    '550e8400-e29b-41d4-a716-446655440003',
+  ];
+
+  for (const userId of demoUsers) {
+    try {
+      await joinMatchmakingQueue(userId, 'ranked');
+      // Add small delay to create different queue times
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (error) {
+      console.log(`Demo user ${userId} already in queue or error:`, error);
+    }
+  }
+  
+  console.log('✅ Demo users added to queue');
 }

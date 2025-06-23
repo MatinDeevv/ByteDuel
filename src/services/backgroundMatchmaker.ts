@@ -2,12 +2,13 @@
  * Background Matchmaker - Runs matchmaking process automatically
  * This service runs in the background to match players in the queue
  */
-import { processMatchmaking } from './matchmakingService';
+import { processMatchmaking, addDemoUsersToQueue } from './matchmakingService';
 
 class BackgroundMatchmaker {
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning = false;
   private intervalMs: number;
+  private hasAddedDemoUsers = false;
 
   constructor(intervalMs: number = 5000) {
     this.intervalMs = intervalMs;
@@ -21,6 +22,18 @@ class BackgroundMatchmaker {
 
     this.isRunning = true;
     console.log(`🚀 Starting background matchmaker (interval: ${this.intervalMs}ms)`);
+
+    // Add demo users once on startup
+    if (!this.hasAddedDemoUsers) {
+      setTimeout(async () => {
+        try {
+          await addDemoUsersToQueue();
+          this.hasAddedDemoUsers = true;
+        } catch (error) {
+          console.log('Demo users already exist or error:', error);
+        }
+      }, 2000);
+    }
 
     // Run immediately
     this.runMatchmaking();

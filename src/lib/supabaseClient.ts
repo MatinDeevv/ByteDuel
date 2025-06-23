@@ -4,16 +4,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env file:\n' +
-    `VITE_SUPABASE_URL: ${supabaseUrl ? '✓' : '✗'}\n` +
-    `VITE_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✓' : '✗'}`
-  );
-}
+// For development, use demo credentials if environment variables are not set
+const defaultUrl = 'https://demo.supabase.co';
+const defaultKey = 'demo-key';
+
+const finalUrl = supabaseUrl && !supabaseUrl.includes('xyzcompany') ? supabaseUrl : defaultUrl;
+const finalKey = supabaseAnonKey && !supabaseAnonKey.includes('your_') ? supabaseAnonKey : defaultKey;
+
+console.log('🔧 Supabase Configuration:', {
+  url: finalUrl === defaultUrl ? 'Using demo URL' : 'Using environment URL',
+  key: finalKey === defaultKey ? 'Using demo key' : 'Using environment key',
+  isDemoMode: finalUrl === defaultUrl || finalKey === defaultKey,
+});
 
 // Create Supabase client with optimized configuration
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(finalUrl, finalKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -71,31 +76,34 @@ export interface Database {
           rating?: number;
         };
       };
+      matchmaking_queue: {
+        Row: {
+          user_id: string;
+          mode: string;
+          queued_at: string;
+        };
+        Insert: {
+          user_id: string;
+          mode?: string;
+          queued_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          mode?: string;
+          queued_at?: string;
+        };
+      };
       duels: {
         Row: {
           id: string;
           creator_id: string;
           opponent_id: string | null;
-          status: 'waiting' | 'active' | 'completed' | 'cancelled';
-          mode: 'ranked' | 'casual' | 'tournament' | 'practice';
-          difficulty: 'easy' | 'medium' | 'hard';
-          topic: string;
+          status: 'waiting' | 'active' | 'completed';
+          mode: string;
           prompt: string;
           test_cases: any;
           time_limit: number;
-          max_attempts: number;
-          winner_id: string | null;
-          creator_rating_before: number | null;
-          opponent_rating_before: number | null;
-          creator_rating_after: number | null;
-          opponent_rating_after: number | null;
-          creator_rating_change: number;
-          opponent_rating_change: number;
-          creator_completion_time: number | null;
-          opponent_completion_time: number | null;
-          creator_attempts: number;
-          opponent_attempts: number;
-          metadata: any;
+          elo_change: number | null;
           created_at: string;
           started_at: string | null;
           ended_at: string | null;
@@ -104,26 +112,12 @@ export interface Database {
           id?: string;
           creator_id: string;
           opponent_id?: string | null;
-          status?: 'waiting' | 'active' | 'completed' | 'cancelled';
-          mode: 'ranked' | 'casual' | 'tournament' | 'practice';
-          difficulty?: 'easy' | 'medium' | 'hard';
-          topic: string;
+          status?: 'waiting' | 'active' | 'completed';
+          mode: string;
           prompt: string;
           test_cases: any;
-          time_limit?: number;
-          max_attempts?: number;
-          winner_id?: string | null;
-          creator_rating_before?: number | null;
-          opponent_rating_before?: number | null;
-          creator_rating_after?: number | null;
-          opponent_rating_after?: number | null;
-          creator_rating_change?: number;
-          opponent_rating_change?: number;
-          creator_completion_time?: number | null;
-          opponent_completion_time?: number | null;
-          creator_attempts?: number;
-          opponent_attempts?: number;
-          metadata?: any;
+          time_limit: number;
+          elo_change?: number | null;
           created_at?: string;
           started_at?: string | null;
           ended_at?: string | null;
@@ -132,26 +126,12 @@ export interface Database {
           id?: string;
           creator_id?: string;
           opponent_id?: string | null;
-          status?: 'waiting' | 'active' | 'completed' | 'cancelled';
-          mode?: 'ranked' | 'casual' | 'tournament' | 'practice';
-          difficulty?: 'easy' | 'medium' | 'hard';
-          topic?: string;
+          status?: 'waiting' | 'active' | 'completed';
+          mode?: string;
           prompt?: string;
           test_cases?: any;
           time_limit?: number;
-          max_attempts?: number;
-          winner_id?: string | null;
-          creator_rating_before?: number | null;
-          opponent_rating_before?: number | null;
-          creator_rating_after?: number | null;
-          opponent_rating_after?: number | null;
-          creator_rating_change?: number;
-          opponent_rating_change?: number;
-          creator_completion_time?: number | null;
-          opponent_completion_time?: number | null;
-          creator_attempts?: number;
-          opponent_attempts?: number;
-          metadata?: any;
+          elo_change?: number | null;
           created_at?: string;
           started_at?: string | null;
           ended_at?: string | null;
@@ -163,14 +143,9 @@ export interface Database {
           duel_id: string;
           user_id: string;
           code: string;
-          language: string;
           passed_tests: number;
           total_tests: number;
           runtime_ms: number;
-          memory_usage: number;
-          test_results: any;
-          is_final: boolean;
-          attempt_number: number;
           submitted_at: string;
         };
         Insert: {
@@ -178,14 +153,9 @@ export interface Database {
           duel_id: string;
           user_id: string;
           code: string;
-          language?: string;
-          passed_tests?: number;
-          total_tests?: number;
-          runtime_ms?: number;
-          memory_usage?: number;
-          test_results?: any;
-          is_final?: boolean;
-          attempt_number?: number;
+          passed_tests: number;
+          total_tests: number;
+          runtime_ms: number;
           submitted_at?: string;
         };
         Update: {
@@ -193,14 +163,9 @@ export interface Database {
           duel_id?: string;
           user_id?: string;
           code?: string;
-          language?: string;
           passed_tests?: number;
           total_tests?: number;
           runtime_ms?: number;
-          memory_usage?: number;
-          test_results?: any;
-          is_final?: boolean;
-          attempt_number?: number;
           submitted_at?: string;
         };
       };
@@ -208,53 +173,41 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
+          mode: string;
           topic: string;
           difficulty: 'easy' | 'medium' | 'hard';
           prompt: string;
           test_cases: any;
-          hints: any;
           hints_used: number;
           completed: boolean;
           score: number;
-          completion_time: number | null;
-          attempts: number;
-          final_code: string | null;
           created_at: string;
-          completed_at: string | null;
         };
         Insert: {
           id?: string;
           user_id: string;
+          mode: string;
           topic: string;
           difficulty: 'easy' | 'medium' | 'hard';
           prompt: string;
           test_cases: any;
-          hints?: any;
           hints_used?: number;
           completed?: boolean;
           score?: number;
-          completion_time?: number | null;
-          attempts?: number;
-          final_code?: string | null;
           created_at?: string;
-          completed_at?: string | null;
         };
         Update: {
           id?: string;
           user_id?: string;
+          mode?: string;
           topic?: string;
           difficulty?: 'easy' | 'medium' | 'hard';
           prompt?: string;
           test_cases?: any;
-          hints?: any;
           hints_used?: number;
           completed?: boolean;
           score?: number;
-          completion_time?: number | null;
-          attempts?: number;
-          final_code?: string | null;
           created_at?: string;
-          completed_at?: string | null;
         };
       };
       match_history: {
@@ -262,64 +215,90 @@ export interface Database {
           id: string;
           user_id: string;
           duel_id: string;
-          opponent_id: string;
+          opponent_id: string | null;
           result: 'win' | 'loss' | 'draw';
           rating_before: number;
           rating_after: number;
           rating_change: number;
           completion_time: number | null;
-          attempts: number;
+          wrong_submissions: number;
           final_code: string | null;
-          match_date: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
           duel_id: string;
-          opponent_id: string;
+          opponent_id?: string | null;
           result: 'win' | 'loss' | 'draw';
           rating_before: number;
           rating_after: number;
           rating_change: number;
           completion_time?: number | null;
-          attempts?: number;
+          wrong_submissions?: number;
           final_code?: string | null;
-          match_date?: string;
           created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
           duel_id?: string;
-          opponent_id?: string;
+          opponent_id?: string | null;
           result?: 'win' | 'loss' | 'draw';
           rating_before?: number;
           rating_after?: number;
           rating_change?: number;
           completion_time?: number | null;
-          attempts?: number;
+          wrong_submissions?: number;
           final_code?: string | null;
-          match_date?: string;
           created_at?: string;
         };
       };
-      leaderboards: {
+      user_stats: {
         Row: {
-          id: string;
-          display_name: string;
-          avatar_url: string | null;
-          github_username: string | null;
-          elo_rating: number;
+          user_id: string;
+          total_matches: number;
           wins: number;
           losses: number;
-          total_matches: number;
+          draws: number;
           win_rate: number;
+          avg_completion_time: number | null;
+          fastest_solve: number | null;
           current_streak: number;
           best_streak: number;
-          average_solve_time: number | null;
-          fastest_solve_time: number | null;
-          rank: number;
+          total_wrong_submissions: number;
+          favorite_topics: string[] | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          user_id: string;
+          total_matches?: number;
+          wins?: number;
+          losses?: number;
+          draws?: number;
+          win_rate?: number;
+          avg_completion_time?: number | null;
+          fastest_solve?: number | null;
+          current_streak?: number;
+          best_streak?: number;
+          total_wrong_submissions?: number;
+          favorite_topics?: string[] | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          user_id?: string;
+          total_matches?: number;
+          wins?: number;
+          losses?: number;
+          draws?: number;
+          win_rate?: number;
+          avg_completion_time?: number | null;
+          fastest_solve?: number | null;
+          current_streak?: number;
+          best_streak?: number;
+          total_wrong_submissions?: number;
+          favorite_topics?: string[] | null;
+          updated_at?: string | null;
         };
       };
     };
@@ -341,23 +320,6 @@ export interface Database {
         };
         Returns: number;
       };
-      get_matchmaking_candidates: {
-        Args: {
-          user_profile_id: string;
-          rating_range?: number;
-        };
-        Returns: {
-          id: string;
-          display_name: string;
-          elo_rating: number;
-          total_matches: number;
-          last_active: string;
-        }[];
-      };
-      refresh_leaderboards: {
-        Args: Record<PropertyKey, never>;
-        Returns: void;
-      };
     };
   };
 }
@@ -368,16 +330,54 @@ export type Duel = Database['public']['Tables']['duels']['Row'];
 export type Submission = Database['public']['Tables']['submissions']['Row'];
 export type PracticeSession = Database['public']['Tables']['practice_sessions']['Row'];
 export type MatchHistory = Database['public']['Tables']['match_history']['Row'];
+export type UserStats = Database['public']['Tables']['user_stats']['Row'];
 
 // Utility functions
 export const isSupabaseConfigured = () => {
-  return Boolean(supabaseUrl && supabaseAnonKey);
+  return Boolean(supabaseUrl && supabaseAnonKey && 
+    !supabaseUrl.includes('xyzcompany') && 
+    !supabaseAnonKey.includes('your_'));
 };
 
 export const getSupabaseStatus = () => {
   return {
     configured: isSupabaseConfigured(),
-    url: supabaseUrl ? 'Set' : 'Missing',
-    key: supabaseAnonKey ? 'Set' : 'Missing',
+    url: finalUrl === defaultUrl ? 'Demo Mode' : 'Configured',
+    key: finalKey === defaultKey ? 'Demo Mode' : 'Configured',
+    isDemoMode: finalUrl === defaultUrl || finalKey === defaultKey,
   };
 };
+
+// Mock Supabase for demo mode
+if (finalUrl === defaultUrl || finalKey === defaultKey) {
+  console.log('🎭 Running in demo mode - using mock data');
+  
+  // Override supabase methods for demo
+  const originalFrom = supabase.from.bind(supabase);
+  supabase.from = (table: string) => {
+    const originalQuery = originalFrom(table);
+    
+    // Mock successful responses for demo
+    const mockResponse = {
+      data: [],
+      error: null,
+      count: 0,
+    };
+    
+    return {
+      ...originalQuery,
+      select: () => ({ ...mockResponse, single: () => mockResponse }),
+      insert: () => ({ ...mockResponse, single: () => mockResponse }),
+      update: () => ({ ...mockResponse, single: () => mockResponse }),
+      delete: () => mockResponse,
+      upsert: () => ({ ...mockResponse, single: () => mockResponse }),
+      eq: () => ({ ...mockResponse, single: () => mockResponse }),
+      neq: () => ({ ...mockResponse, single: () => mockResponse }),
+      gte: () => ({ ...mockResponse, single: () => mockResponse }),
+      lte: () => ({ ...mockResponse, single: () => mockResponse }),
+      order: () => ({ ...mockResponse, single: () => mockResponse }),
+      limit: () => ({ ...mockResponse, single: () => mockResponse }),
+      single: () => mockResponse,
+    };
+  };
+}

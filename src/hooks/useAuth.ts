@@ -4,7 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { supabase, type Profile } from '../lib/supabaseClient';
+import { supabase, type Profile, isSupabaseConfigured } from '../lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 
 export interface AuthState {
@@ -42,6 +42,12 @@ export function useAuth(): AuthState & AuthActions {
     queryFn: async () => {
       
       try {
+        // Check if Supabase is configured
+        if (!isSupabaseConfigured()) {
+          console.log('🎭 Demo mode - creating mock user');
+          return createDemoUser();
+        }
+
         // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -62,6 +68,11 @@ export function useAuth(): AuthState & AuthActions {
         
         return { user: session.user, profile };
       } catch (error) {
+        console.error('Auth query error:', error);
+        // In demo mode, return demo user on error
+        if (!isSupabaseConfigured()) {
+          return createDemoUser();
+        }
         throw error;
       }
     },
@@ -71,8 +82,9 @@ export function useAuth(): AuthState & AuthActions {
     },
   });
 
-  // Set up auth state listener
+  // Set up auth state listener (only if Supabase is configured)
   useEffect(() => {
+    if (!isSupabaseConfigured()) return;
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -97,6 +109,12 @@ export function useAuth(): AuthState & AuthActions {
   const signInWithGitHub = async () => {
     
     try {
+      if (!isSupabaseConfigured()) {
+        // Demo mode - simulate successful auth
+        queryClient.setQueryData(AUTH_QUERY_KEY, createDemoUser());
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
@@ -118,6 +136,12 @@ export function useAuth(): AuthState & AuthActions {
   const signInWithEmail = async (email: string, password: string) => {
     
     try {
+      if (!isSupabaseConfigured()) {
+        // Demo mode - simulate successful auth
+        queryClient.setQueryData(AUTH_QUERY_KEY, createDemoUser());
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -140,6 +164,12 @@ export function useAuth(): AuthState & AuthActions {
   const signUpWithEmail = async (email: string, password: string, displayName: string) => {
     
     try {
+      if (!isSupabaseConfigured()) {
+        // Demo mode - simulate successful auth
+        queryClient.setQueryData(AUTH_QUERY_KEY, createDemoUser());
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -175,6 +205,12 @@ export function useAuth(): AuthState & AuthActions {
   const signOut = async () => {
     
     try {
+      if (!isSupabaseConfigured()) {
+        // Demo mode - clear auth data
+        queryClient.setQueryData(AUTH_QUERY_KEY, null);
+        return;
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         setError(error.message);
@@ -197,7 +233,13 @@ export function useAuth(): AuthState & AuthActions {
         supabaseUrl: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
         supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
         currentUrl: window.location.href,
+        isConfigured: isSupabaseConfigured(),
       });
+      
+      if (!isSupabaseConfigured()) {
+        console.log('🎭 Running in demo mode');
+        return;
+      }
       
       // Check session
       const { data: session, error: sessionError } = await supabase.auth.getSession();
@@ -284,6 +326,34 @@ export function useAuth(): AuthState & AuthActions {
 }
 
 /**
+ * Create demo user for testing
+ */
+function createDemoUser(): { user: User; profile: Profile } {
+  const demoUser = {
+    id: 'demo-user-123',
+    email: 'demo@byteduel.com',
+    user_metadata: {
+      display_name: 'Demo Player',
+      user_name: 'demoplayer',
+    },
+  } as User;
+
+  const demoProfile: Profile = {
+    id: 'demo-user-123',
+    github_username: 'demoplayer',
+    display_name: 'Demo Player',
+    skill_level: 'intermediate',
+    elo_rating: 1350,
+    rating: 1350,
+    games_played: 15,
+    games_won: 9,
+    created_at: new Date().toISOString(),
+  };
+
+  return { user: demoUser, profile: demoProfile };
+}
+
+/**
  * Get existing profile
  */
 async function getProfile(userId: string): Promise<Profile | null> {
@@ -298,7 +368,6 @@ async function getProfile(userId: string): Promise<Profile | null> {
     if (error && error.code !== 'PGRST116') {
       throw error;
     }
-
 
     return data || null;
   } catch (error) {
@@ -328,7 +397,6 @@ async function createProfile(user: User): Promise<Profile> {
       games_played: 0,
       games_won: 0,
     };
-
 
     const { data, error } = await supabase
       .from('users')
