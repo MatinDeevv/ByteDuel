@@ -61,10 +61,5 @@ createRoot(document.getElementById('root')!).render(
         </BrowserRouter>
       </QueryProvider>
     </ErrorBoundary>
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </QueryProvider>
-    </ErrorBoundary>
   </StrictMode>
 );
