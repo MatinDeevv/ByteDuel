@@ -71,16 +71,16 @@ const StandardizedLobby: React.FC<StandardizedLobbyProps> = ({ className = '' })
     setJoiningLobby(lobbyId);
     try {
       const result = await joinLobby(lobbyId);
-      console.log('Join result:', result);
+      console.log('📋 Join result:', result);
       
       if (result.success) {
         if (result.duel_id) {
           // Lobby was full, duel created
-          console.log('✅ Duel created, navigating to:', result.duel_id);
+          console.log('🎯 Duel created, navigating to:', result.duel_id);
           navigate(`/duel/${result.duel_id}`);
         } else {
           // Successfully joined, waiting for more players
-          console.log('✅ Joined lobby, waiting for players');
+          console.log('⏳ Joined lobby, waiting for more players');
           loadLobbies(); // Refresh to show updated lobby
         }
       } else {
@@ -89,8 +89,8 @@ const StandardizedLobby: React.FC<StandardizedLobbyProps> = ({ className = '' })
         alert(errorMsg);
       }
     } catch (error) {
-      console.error('Failed to join lobby:', error);
-      alert(`Failed to join lobby: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('💥 Exception joining lobby:', error);
+      alert(`Failed to join lobby: ${error instanceof Error ? error.message : 'Network error'}`);
     } finally {
       setJoiningLobby(null);
     }

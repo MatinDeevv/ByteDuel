@@ -39,19 +39,8 @@ export async function getAllLobbies(): Promise<GameLobby[]> {
   try {
     console.log('🔍 Fetching all available lobbies...');
     
-    const { data: lobbies, error } = await supabase
-      .from('game_lobbies')
-      .select(`
-        *,
-        host:users!host_id (
-          display_name,
-          elo_rating,
-          avatar_url
-        )
-      `)
-      .in('status', ['waiting', 'starting'])
-      .order('created_at', { ascending: false })
-      .limit(50);
+    // Use the database function for better performance and consistency
+    const { data: lobbies, error } = await supabase.rpc('get_lobbies_with_host_info');
 
     if (error) {
       console.error('❌ Supabase query error:', error);
@@ -63,9 +52,9 @@ export async function getAllLobbies(): Promise<GameLobby[]> {
     return (lobbies || []).map((lobby: any) => ({
       id: lobby.id,
       host_id: lobby.host_id,
-      host_name: lobby.host?.display_name || 'Unknown',
-      host_rating: lobby.host?.elo_rating || 1200,
-      host_avatar: lobby.host?.avatar_url,
+      host_name: lobby.host_name || 'Unknown',
+      host_rating: lobby.host_rating || 1200,
+      host_avatar: lobby.host_avatar,
       player_ids: lobby.player_ids || [],
       current_players: lobby.current_players,
       max_players: lobby.max_players,
@@ -166,29 +155,37 @@ export async function joinLobby(lobbyId: string): Promise<JoinLobbyResult> {
 
   try {
     // Use the database function to join lobby
-    const { data, error } = await supabase.rpc('join_lobby', {
+    const { data: result, error } = await supabase.rpc('join_lobby', {
       lobby_id: lobbyId,
       player_id: user.id,
     });
 
     if (error) {
       console.error('❌ Join lobby error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: `Database error: ${error.message}` };
     }
 
-    if (!data.success) {
-      console.error('❌ Join failed:', data.error);
-      return { success: false, error: data.error };
+    if (!result || !result.success) {
+      const errorMsg = result?.error || 'Unknown error';
+      console.error('❌ Join failed:', errorMsg);
+      return { success: false, error: errorMsg };
     }
 
     // Check if lobby is now full and should start a duel
-    const { data: lobby } = await supabase
-      .from('game_lobbies')
-      .select('*')
-      .eq('id', lobbyId)
-      .single();
+    if (result.status === 'starting') {
+      console.log('🎯 Lobby is full, creating duel...');
+      
+      // Get full lobby details for duel creation
+      const { data: lobby } = await supabase
+        .from('game_lobbies')
+        .select('*')
+        .eq('id', lobbyId)
+        .single();
 
-    if (lobby && lobby.status === 'starting') {
+      if (!lobby) {
+        return { success: false, error: 'Lobby not found after joining' };
+      }
+
       // Create a duel for this lobby
       const duelId = await createDuelFromLobby(lobby);
       
@@ -225,7 +222,7 @@ export async function leaveLobby(lobbyId: string): Promise<boolean> {
   }
 
   try {
-    const { data, error } = await supabase.rpc('leave_lobby', {
+    const { data: result, error } = await supabase.rpc('leave_lobby', {
       lobby_id: lobbyId,
       player_id: user.id,
     });
@@ -235,8 +232,13 @@ export async function leaveLobby(lobbyId: string): Promise<boolean> {
       return false;
     }
 
+    if (!result || !result.success) {
+      console.error('❌ Leave failed:', result?.error || 'Unknown error');
+      return false;
+    }
+
     console.log('✅ Successfully left lobby');
-    return data.success;
+    return true;
   } catch (error) {
     console.error('❌ Leave lobby exception:', error);
     return false;
