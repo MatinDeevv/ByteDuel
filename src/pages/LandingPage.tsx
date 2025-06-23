@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Zap, Github, Code, Trophy, Users, BookOpen, Search, User, LogOut, Play } from 'lucide-react';
+import { Zap, Github, Code, Trophy, Users, BookOpen, Search, User, LogOut, Target } from 'lucide-react';
 import AnimatedButton from '../components/AnimatedButton';
 import AnimatedCard from '../components/AnimatedCard';
 import ModeSelector from '../components/ModeSelector';
@@ -9,12 +9,14 @@ import AnimatedLeaderboard from '../components/AnimatedLeaderboard';
 import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
+import AdvancedMatchmakingModal from '../components/AdvancedMatchmakingModal';
 import { useAuth } from '../hooks/useAuth';
 import { GameMode } from '../types';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedMode, setSelectedMode] = useState<GameMode>('ranked-duel');
+  const [showMatchmakingModal, setShowMatchmakingModal] = useState(false);
   const { user, profile, signOut, signInWithGitHub } = useAuth();
 
   // Mock leaderboard data
@@ -43,7 +45,8 @@ const LandingPage: React.FC = () => {
     if (selectedMode === 'practice') {
       navigate('/practice');
     } else if (selectedMode === 'ranked-duel') {
-      navigate('/lobby'); // Navigate to new lobby page
+      // Show advanced matchmaking modal
+      setShowMatchmakingModal(true);
     } else {
       // For other modes, redirect to dashboard for now
       navigate('/dashboard');
@@ -91,10 +94,10 @@ const LandingPage: React.FC = () => {
                 <AnimatedButton
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate('/lobby')}
+                  onClick={() => setShowMatchmakingModal(true)}
                 >
-                  <Play className="h-4 w-4 mr-1" />
-                  Game Lobby
+                  <Zap className="h-4 w-4 mr-1" />
+                  Quick Match
                 </AnimatedButton>
                 <AnimatedButton
                   variant="outline"
@@ -155,8 +158,8 @@ const LandingPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Choose your battle: ranked duels, practice mode, tournaments, or challenge the AI.
-            Every match generates an epic highlight reel with AI commentary.
+            Experience Chess.com-style matchmaking for coding duels. 
+            Advanced algorithms find perfect opponents with dynamic rating expansion and fair play pools.
           </motion.p>
 
           {/* Game Mode Selection */}
@@ -192,7 +195,7 @@ const LandingPage: React.FC = () => {
                       </div>
                     </div>
                     <p className="text-sm text-green-700 dark:text-green-300">
-                      Ready to compete? Choose your game mode above!
+                      Ready to compete? Get matched with perfect opponents instantly!
                     </p>
                   </div>
                 </div>
@@ -248,12 +251,12 @@ const LandingPage: React.FC = () => {
                   </>
                 ) : selectedMode === 'ranked-duel' ? (
                   <>
-                    <Play className="h-5 w-5 mr-2" />
-                    Enter Game Lobby
+                    <Zap className="h-5 w-5 mr-2" />
+                    Smart Matchmaking
                   </>
                 ) : (
                   <>
-                    <Zap className="h-5 w-5 mr-2" />
+                    <Target className="h-5 w-5 mr-2" />
                     {selectedMode === 'timed-trial' ? 'Start Trial' :
                      selectedMode === 'tournament' ? 'Join Tournament' :
                      'Challenge Bot'}
@@ -271,10 +274,10 @@ const LandingPage: React.FC = () => {
             transition={{ duration: 0.8, delay: 1.0 }}
           >
             {[
-              { icon: Code, title: 'AI-Generated Challenges', desc: 'Fresh, fair coding problems tailored to your skill level', color: 'text-blue-500' },
-              { icon: Trophy, title: 'Real-time Competition', desc: 'Live editor with timer and instant feedback', color: 'text-green-500' },
+              { icon: Zap, title: 'Smart Matching', desc: 'Chess.com-style dynamic rating expansion', color: 'text-blue-500' },
+              { icon: Users, title: 'Fair Play Pools', desc: 'Separate queues for different player types', color: 'text-green-500' },
               { icon: BookOpen, title: 'Practice Mode', desc: 'Self-paced learning with hints and guidance', color: 'text-purple-500' },
-              { icon: Users, title: 'Game Lobby', desc: 'Browse and join games hosted by players worldwide', color: 'text-pink-500' },
+              { icon: Trophy, title: 'Color Balancing', desc: 'Smart assignment based on recent games', color: 'text-pink-500' },
             ].map((feature, index) => (
               <motion.div 
                 key={feature.title}
@@ -308,6 +311,12 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
       </div>
+
+      {/* Advanced Matchmaking Modal */}
+      <AdvancedMatchmakingModal
+        isOpen={showMatchmakingModal}
+        onClose={() => setShowMatchmakingModal(false)}
+      />
     </PageTransition>
   );
 };

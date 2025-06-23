@@ -13,7 +13,6 @@ import {
   LogOut,
   Settings,
   Github,
-  Play,
   BookOpen,
   Award
 } from 'lucide-react';
@@ -22,6 +21,7 @@ import AnimatedCard from '../components/AnimatedCard';
 import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
+import AdvancedMatchmakingModal from '../components/AdvancedMatchmakingModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboardDashboard } from '../hooks/useLeaderboard';
 import { useDuelStats, useUserRecentDuels } from '../hooks/useDuels';
@@ -50,6 +50,7 @@ interface RecentMatch {
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const [showMatchmakingModal, setShowMatchmakingModal] = useState(false);
   
   // Load dashboard data using React Query hooks
   const { globalLeaderboard, userRanking } = useLeaderboardDashboard(profile?.id || null);
@@ -178,82 +179,74 @@ const DashboardPage: React.FC = () => {
         </header>
 
         <div className="container mx-auto px-6 py-8">
-          {/* Profile Card */}
+          {/* Quick Actions */}
           <motion.div
             className="mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <AnimatedCard className="p-6">
-              <div className="flex items-center space-x-6">
-                {/* Avatar */}
-                <div className="relative">
-                  {profile?.avatar_url ? (
-                    <img
-                      src={profile.avatar_url}
-                      alt={profile.display_name}
-                      className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-800 shadow-lg"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
-                      {profile?.display_name.charAt(0).toUpperCase()}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Smart Matchmaking Card */}
+              <AnimatedCard className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Zap className="h-6 w-6 text-blue-500" />
                     </div>
-                  )}
-                  <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border-2 border-gray-200 dark:border-gray-700">
-                    <Award className="h-4 w-4 text-yellow-500" />
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                        Smart Matchmaking
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Chess.com-style intelligent matching
+                      </p>
+                    </div>
                   </div>
                 </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Advanced algorithms find the perfect opponent with dynamic rating expansion and fair play pools.
+                </p>
+                <AnimatedButton
+                  onClick={() => setShowMatchmakingModal(true)}
+                  variant="primary"
+                  className="w-full"
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Find Smart Match
+                </AnimatedButton>
+              </AnimatedCard>
 
-                {/* Profile Info */}
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {profile?.display_name}
-                    </h2>
-                    {profile?.github_username && (
-                      <div className="flex items-center text-gray-600 dark:text-gray-400 text-sm">
-                        <Github className="h-4 w-4 mr-1" />
-                        <span>@{profile.github_username}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-6 text-sm text-gray-600 dark:text-gray-400">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      <span>Joined {new Date(profile?.created_at || '').toLocaleDateString()}</span>
+              {/* Practice Mode Card */}
+              <AnimatedCard className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-500/10 rounded-lg">
+                      <BookOpen className="h-6 w-6 text-green-500" />
                     </div>
-                    <div className="flex items-center">
-                      <Trophy className="h-4 w-4 mr-1" />
-                      <span>{profile?.wins || 0} wins</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Target className="h-4 w-4 mr-1" />
-                      <span>{profile?.losses || 0} losses</span>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                        Practice Mode
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Sharpen your coding skills
+                      </p>
                     </div>
                   </div>
                 </div>
-
-                {/* Quick Actions */}
-                <div className="flex space-x-3">
-                  <AnimatedButton
-                    onClick={() => navigate('/')}
-                    variant="primary"
-                    className="px-6"
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Quick Match
-                  </AnimatedButton>
-                  <AnimatedButton
-                    onClick={() => navigate('/practice')}
-                    variant="secondary"
-                  >
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Practice
-                  </AnimatedButton>
-                </div>
-              </div>
-            </AnimatedCard>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Self-paced learning with AI hints, personalized difficulty, and skill progression tracking.
+                </p>
+                <AnimatedButton
+                  onClick={() => navigate('/practice')}
+                  variant="secondary"
+                  className="w-full"
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Start Practice
+                </AnimatedButton>
+              </AnimatedCard>
+            </div>
           </motion.div>
 
           {/* Stats Grid */}
@@ -300,12 +293,12 @@ const DashboardPage: React.FC = () => {
               <AnimatedCard className="p-6" delay={0.3}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg. Time</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Practice Score</p>
                     <p className="text-2xl font-bold text-purple-500">
                       {practiceStats?.averageScore ? `${practiceStats.averageScore}%` : 'N/A'}
                     </p>
                   </div>
-                  <Clock className="h-8 w-8 text-purple-500" />
+                  <Award className="h-8 w-8 text-purple-500" />
                 </div>
               </AnimatedCard>
 
@@ -350,13 +343,13 @@ const DashboardPage: React.FC = () => {
                   <div className="text-center py-12">
                     <Code className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      No matches played yet. Start your first duel!
+                      No matches played yet. Start your first smart match!
                     </p>
                     <AnimatedButton
-                      onClick={() => navigate('/')}
+                      onClick={() => setShowMatchmakingModal(true)}
                       variant="primary"
                     >
-                      Find Match
+                      Find Smart Match
                     </AnimatedButton>
                   </div>
                 ) : (
@@ -416,6 +409,12 @@ const DashboardPage: React.FC = () => {
             </AnimatedCard>
           </motion.div>
         </div>
+
+        {/* Advanced Matchmaking Modal */}
+        <AdvancedMatchmakingModal
+          isOpen={showMatchmakingModal}
+          onClose={() => setShowMatchmakingModal(false)}
+        />
       </div>
     </PageTransition>
   );
