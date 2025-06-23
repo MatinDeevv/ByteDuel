@@ -32,48 +32,53 @@ export interface JoinGameResult {
  * Get all available games
  */
 export async function getAllGames(): Promise<GameLobby[]> {
-  const { data: duels, error } = await supabase
-    .from('duels')
-    .select(`
-      id,
-      creator_id,
-      mode,
-      prompt,
-      time_limit,
-      created_at,
-      status,
-      creator:users!creator_id (
-        display_name,
-        elo_rating,
-        avatar_url
-      )
-    `)
-    .in('status', ['waiting', 'starting'])
-    .is('opponent_id', null)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  try {
+    const { data: duels, error } = await supabase
+      .from('duels')
+      .select(`
+        id,
+        creator_id,
+        mode,
+        prompt,
+        time_limit,
+        created_at,
+        status,
+        creator:users!creator_id (
+          display_name,
+          elo_rating,
+          avatar_url
+        )
+      `)
+      .in('status', ['waiting', 'starting'])
+      .is('opponent_id', null)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
-  if (error) {
+    if (error) {
+      console.error('Supabase query error:', error);
+      return [];
+    }
+
+    return (duels || []).map((duel: any) => ({
+      id: duel.id,
+      host_id: duel.creator_id,
+      host_name: duel.creator?.display_name || 'Unknown',
+      host_rating: duel.creator?.elo_rating || 1200,
+      host_avatar: duel.creator?.avatar_url,
+      mode: duel.mode || 'ranked',
+      difficulty: 'medium', // Default, could be stored in duel
+      topic: 'algorithms', // Default, could be extracted from prompt
+      max_players: 2,
+      current_players: 1,
+      status: duel.status,
+      created_at: duel.created_at,
+      time_limit: duel.time_limit,
+      description: duel.prompt?.slice(0, 100) + '...',
+    }));
+  } catch (error) {
     console.error('Failed to fetch games:', error);
     return [];
   }
-
-  return (duels || []).map((duel: any) => ({
-    id: duel.id,
-    host_id: duel.creator_id,
-    host_name: duel.creator?.display_name || 'Unknown',
-    host_rating: duel.creator?.elo_rating || 1200,
-    host_avatar: duel.creator?.avatar_url,
-    mode: duel.mode,
-    difficulty: 'medium', // Default, could be stored in duel
-    topic: 'algorithms', // Default, could be extracted from prompt
-    max_players: 2,
-    current_players: 1,
-    status: duel.status,
-    created_at: duel.created_at,
-    time_limit: duel.time_limit,
-    description: duel.prompt?.slice(0, 100) + '...',
-  }));
 }
 
 /**
@@ -86,17 +91,24 @@ export async function createGame(options: {
   timeLimit?: number;
   description?: string;
 }): Promise<GameLobby> {
+  console.log('🎮 Creating game with options:', options);
+  
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     throw new Error('User not authenticated');
   }
 
   // Get user profile
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('display_name, elo_rating, avatar_url')
     .eq('id', user.id)
     .single();
+
+  if (profileError) {
+    console.error('Failed to get user profile:', profileError);
+    throw new Error('Failed to get user profile');
+  }
 
   // Generate puzzle
   const puzzle = await generatePuzzle('', '', 'ranked-duel', {
@@ -105,23 +117,35 @@ export async function createGame(options: {
     mode: 'drills',
   });
 
+  console.log('🧩 Generated puzzle:', { 
+    promptLength: puzzle.prompt.length, 
+    testCount: puzzle.tests.length 
+  });
+
   // Create duel
+  const duelData = {
+    creator_id: user.id,
+    mode: options.mode,
+    prompt: puzzle.prompt,
+    test_cases: puzzle.tests,
+    time_limit: options.timeLimit || 900,
+    status: 'waiting' as const,
+  };
+
+  console.log('💾 Inserting duel data:', duelData);
+
   const { data: duel, error } = await supabase
     .from('duels')
-    .insert({
-      creator_id: user.id,
-      mode: options.mode,
-      prompt: puzzle.prompt,
-      test_cases: puzzle.tests,
-      time_limit: options.timeLimit || 900,
-      status: 'waiting',
-    })
+    .insert(duelData)
     .select()
     .single();
 
   if (error) {
+    console.error('Failed to create duel:', error);
     throw new Error(`Failed to create game: ${error.message}`);
   }
+
+  console.log('✅ Game created successfully:', duel.id);
 
   return {
     id: duel.id,
@@ -145,12 +169,38 @@ export async function createGame(options: {
  * Join an existing game
  */
 export async function joinGame(gameId: string): Promise<JoinGameResult> {
+  console.log('🚪 Attempting to join game:', gameId);
+  
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'User not authenticated' };
   }
 
   try {
+    // First check if the game exists and is available
+    const { data: existingDuel, error: checkError } = await supabase
+      .from('duels')
+      .select('id, creator_id, status, opponent_id')
+      .eq('id', gameId)
+      .single();
+
+    if (checkError) {
+      console.error('Game check error:', checkError);
+      return { success: false, error: 'Game not found' };
+    }
+
+    if (existingDuel.status !== 'waiting') {
+      return { success: false, error: 'Game is no longer available' };
+    }
+
+    if (existingDuel.opponent_id) {
+      return { success: false, error: 'Game is already full' };
+    }
+
+    if (existingDuel.creator_id === user.id) {
+      return { success: false, error: 'Cannot join your own game' };
+    }
+
     // Update duel with opponent and start it
     const { data: duel, error } = await supabase
       .from('duels')
@@ -166,11 +216,14 @@ export async function joinGame(gameId: string): Promise<JoinGameResult> {
       .single();
 
     if (error) {
+      console.error('Join game error:', error);
       return { success: false, error: 'Failed to join game or game no longer available' };
     }
 
+    console.log('✅ Successfully joined game:', duel.id);
     return { success: true, duelId: duel.id };
   } catch (error) {
+    console.error('Join game exception:', error);
     return { success: false, error: 'Failed to join game' };
   }
 }
@@ -179,6 +232,8 @@ export async function joinGame(gameId: string): Promise<JoinGameResult> {
  * Cancel/delete a game (only by host)
  */
 export async function cancelGame(gameId: string): Promise<boolean> {
+  console.log('❌ Cancelling game:', gameId);
+  
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return false;
@@ -191,7 +246,13 @@ export async function cancelGame(gameId: string): Promise<boolean> {
     .eq('creator_id', user.id)
     .eq('status', 'waiting');
 
-  return !error;
+  if (error) {
+    console.error('Failed to cancel game:', error);
+    return false;
+  }
+
+  console.log('✅ Game cancelled successfully');
+  return true;
 }
 
 /**

@@ -42,34 +42,31 @@ export async function generatePuzzle(
   // Mock implementation for development - different puzzles based on mode
   const competitivePuzzles: GeneratedPuzzle[] = [
     {
-      prompt: `Write a function that checks if a string is a valid palindrome.
+      prompt: `Write a function that finds the two numbers in an array that add up to a target sum.
 
-A palindrome reads the same forward and backward. For this problem:
-- Ignore case (uppercase/lowercase)
-- Ignore spaces and punctuation
-- Only consider alphanumeric characters
+Given an array of integers and a target sum, return the indices of the two numbers that add up to the target.
+
+You may assume that each input would have exactly one solution, and you may not use the same element twice.
 
 Examples:
-- "A man a plan a canal Panama" → true
-- "race a car" → false
-- "Was it a car or a cat I saw?" → true
-- "" → true (empty string is a palindrome)
+- Input: nums = [2, 7, 11, 15], target = 9
+- Output: [0, 1] (because nums[0] + nums[1] = 2 + 7 = 9)
+- Input: nums = [3, 2, 4], target = 6  
+- Output: [1, 2]
 
 Function signature:
-function isPalindrome(s) {
+function twoSum(nums, target) {
   // Your code here
 }`,
       tests: [
-        { input: '"A man a plan a canal Panama"', expected: 'true' },
-        { input: '"race a car"', expected: 'false' },
-        { input: '"Was it a car or a cat I saw?"', expected: 'true' },
-        { input: '""', expected: 'true' },
-        { input: '"Madam"', expected: 'true' },
-        { input: '"No lemon, no melon"', expected: 'true' },
-        { input: '"hello"', expected: 'false' },
+        { input: '[2, 7, 11, 15], 9', expected: '[0, 1]' },
+        { input: '[3, 2, 4], 6', expected: '[1, 2]' },
+        { input: '[3, 3], 6', expected: '[0, 1]' },
+        { input: '[1, 2, 3, 4], 7', expected: '[2, 3]' },
+        { input: '[5, 5], 10', expected: '[0, 1]' },
       ],
       difficulty: 'easy',
-      tags: ['strings', 'two-pointers', 'palindrome'],
+      tags: ['arrays', 'hash-table', 'two-pointers'],
     },
     {
       prompt: `Find the maximum profit from buying and selling a stock.

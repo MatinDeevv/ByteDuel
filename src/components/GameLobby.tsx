@@ -66,30 +66,42 @@ const GameLobby: React.FC<GameLobbyProps> = ({ className = '' }) => {
   const handleJoinGame = async (gameId: string) => {
     if (!user) return;
     
+    console.log('🚪 Joining game:', gameId);
     setJoiningGame(gameId);
     try {
       const result = await joinGame(gameId);
+      console.log('Join result:', result);
+      
       if (result.success && result.duelId) {
+        console.log('✅ Successfully joined, navigating to duel:', result.duelId);
         navigate(`/duel/${result.duelId}`);
       } else {
-        alert(result.error || 'Failed to join game');
+        const errorMsg = result.error || 'Failed to join game';
+        console.error('❌ Join failed:', errorMsg);
+        alert(errorMsg);
       }
     } catch (error) {
       console.error('Failed to join game:', error);
-      alert('Failed to join game');
+      alert(`Failed to join game: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setJoiningGame(null);
     }
   };
 
   const handleCancelGame = async (gameId: string) => {
+    console.log('❌ Cancelling game:', gameId);
     try {
       const success = await cancelGame(gameId);
       if (success) {
+        console.log('✅ Game cancelled successfully');
         loadGames(); // Refresh the list
+      } else {
+        console.error('❌ Failed to cancel game');
+        alert('Failed to cancel game');
       }
     } catch (error) {
       console.error('Failed to cancel game:', error);
+      alert(`Failed to cancel game: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -408,6 +420,14 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ isOpen, onClose, onGa
   const handleCreate = async () => {
     setCreating(true);
     try {
+      console.log('🎮 Creating game with options:', {
+        mode,
+        difficulty,
+        topic,
+        timeLimit,
+        description,
+      });
+      
       await createGame({
         mode,
         difficulty,
@@ -416,9 +436,10 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ isOpen, onClose, onGa
         description: description || undefined,
       });
       onGameCreated();
+      console.log('✅ Game created successfully');
     } catch (error) {
       console.error('Failed to create game:', error);
-      alert('Failed to create game');
+      alert(`Failed to create game: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setCreating(false);
     }
