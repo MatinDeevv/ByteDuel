@@ -4,7 +4,7 @@ import { Search, X, Users, Clock, Zap, Trophy, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AnimatedButton from './AnimatedButton';
 import RatingDisplay from './RatingDisplay';
-import { useFastMatchmakingStore } from '../store/fastMatchmakingStore';
+import { useFastMatchmakingStore } from '../../store/fastMatchmakingStore';
 import { useAuth } from '../hooks/useAuth';
 import { getRatingTier } from '../lib/elo';
 
