@@ -21,7 +21,7 @@ import AnimatedCard from '../components/AnimatedCard';
 import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
-import AdvancedMatchmakingModal from '../components/AdvancedMatchmakingModal';
+import SimpleMatchmakingModal from '../components/SimpleMatchmakingModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboardDashboard } from '../hooks/useLeaderboard';
 import { useDuelStats, useUserRecentDuels } from '../hooks/useDuels';
@@ -187,7 +187,7 @@ const DashboardPage: React.FC = () => {
             transition={{ duration: 0.5 }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Smart Matchmaking Card */}
+              {/* Quick Matchmaking Card */}
               <AnimatedCard className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -196,16 +196,16 @@ const DashboardPage: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                        Smart Matchmaking
+                        Quick Matchmaking
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Chess.com-style intelligent matching
+                        Fast FIFO queue matching
                       </p>
                     </div>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Advanced algorithms find the perfect opponent with dynamic rating expansion and fair play pools.
+                  Simple, race-free atomic queue matching gets you into games in seconds.
                 </p>
                 <AnimatedButton
                   onClick={() => setShowMatchmakingModal(true)}
@@ -213,7 +213,7 @@ const DashboardPage: React.FC = () => {
                   className="w-full"
                 >
                   <Zap className="h-4 w-4 mr-2" />
-                  Find Smart Match
+                  Find Quick Match
                 </AnimatedButton>
               </AnimatedCard>
 
@@ -343,13 +343,13 @@ const DashboardPage: React.FC = () => {
                   <div className="text-center py-12">
                     <Code className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      No matches played yet. Start your first smart match!
+                      No matches played yet. Start your first quick match!
                     </p>
                     <AnimatedButton
                       onClick={() => setShowMatchmakingModal(true)}
                       variant="primary"
                     >
-                      Find Smart Match
+                      Find Quick Match
                     </AnimatedButton>
                   </div>
                 ) : (
@@ -397,7 +397,7 @@ const DashboardPage: React.FC = () => {
                             {ratingChange > 0 ? '+' : ''}{ratingChange}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            ELO
+                            Rating
                           </div>
                         </div>
                       </motion.div>
@@ -410,10 +410,11 @@ const DashboardPage: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Advanced Matchmaking Modal */}
-        <AdvancedMatchmakingModal
+        {/* Simple Matchmaking Modal */}
+        <SimpleMatchmakingModal
           isOpen={showMatchmakingModal}
           onClose={() => setShowMatchmakingModal(false)}
+          mode="ranked"
         />
       </div>
     </PageTransition>

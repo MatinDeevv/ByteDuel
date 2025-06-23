@@ -9,7 +9,7 @@ import AnimatedLeaderboard from '../components/AnimatedLeaderboard';
 import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
-import AdvancedMatchmakingModal from '../components/AdvancedMatchmakingModal';
+import SimpleMatchmakingModal from '../components/SimpleMatchmakingModal';
 import { useAuth } from '../hooks/useAuth';
 import { GameMode } from '../types';
 
@@ -45,7 +45,7 @@ const LandingPage: React.FC = () => {
     if (selectedMode === 'practice') {
       navigate('/practice');
     } else if (selectedMode === 'ranked-duel') {
-      // Show advanced matchmaking modal
+      // Show simple matchmaking modal
       setShowMatchmakingModal(true);
     } else {
       // For other modes, redirect to dashboard for now
@@ -158,8 +158,8 @@ const LandingPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Experience Chess.com-style matchmaking for coding duels. 
-            Advanced algorithms find perfect opponents with dynamic rating expansion and fair play pools.
+            Simple, fast, and fair matchmaking. 
+            Race-free atomic queue matching gets you into games in seconds.
           </motion.p>
 
           {/* Game Mode Selection */}
@@ -191,11 +191,11 @@ const LandingPage: React.FC = () => {
                         <p className="font-semibold text-green-900 dark:text-green-100">
                           Welcome, {profile.display_name}!
                         </p>
-                        <RatingDisplay rating={profile.elo_rating} size="sm" />
+                        <RatingDisplay rating={profile.rating} size="sm" />
                       </div>
                     </div>
                     <p className="text-sm text-green-700 dark:text-green-300">
-                      Ready to compete? Get matched with perfect opponents instantly!
+                      Ready to compete? Get matched instantly with our fast queue system!
                     </p>
                   </div>
                 </div>
@@ -252,7 +252,7 @@ const LandingPage: React.FC = () => {
                 ) : selectedMode === 'ranked-duel' ? (
                   <>
                     <Zap className="h-5 w-5 mr-2" />
-                    Smart Matchmaking
+                    Quick Matchmaking
                   </>
                 ) : (
                   <>
@@ -274,10 +274,10 @@ const LandingPage: React.FC = () => {
             transition={{ duration: 0.8, delay: 1.0 }}
           >
             {[
-              { icon: Zap, title: 'Smart Matching', desc: 'Chess.com-style dynamic rating expansion', color: 'text-blue-500' },
-              { icon: Users, title: 'Fair Play Pools', desc: 'Separate queues for different player types', color: 'text-green-500' },
+              { icon: Zap, title: 'Instant Matching', desc: 'FIFO queue with atomic operations', color: 'text-blue-500' },
+              { icon: Users, title: 'Race-Free', desc: 'PostgreSQL locks prevent duplicate matches', color: 'text-green-500' },
               { icon: BookOpen, title: 'Practice Mode', desc: 'Self-paced learning with hints and guidance', color: 'text-purple-500' },
-              { icon: Trophy, title: 'Color Balancing', desc: 'Smart assignment based on recent games', color: 'text-pink-500' },
+              { icon: Trophy, title: 'Real-time Sync', desc: 'Supabase realtime notifications', color: 'text-pink-500' },
             ].map((feature, index) => (
               <motion.div 
                 key={feature.title}
@@ -312,10 +312,11 @@ const LandingPage: React.FC = () => {
       </section>
       </div>
 
-      {/* Advanced Matchmaking Modal */}
-      <AdvancedMatchmakingModal
+      {/* Simple Matchmaking Modal */}
+      <SimpleMatchmakingModal
         isOpen={showMatchmakingModal}
         onClose={() => setShowMatchmakingModal(false)}
+        mode="ranked"
       />
     </PageTransition>
   );
