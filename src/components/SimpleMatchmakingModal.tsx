@@ -4,7 +4,7 @@ import { Search, X, Users, Clock, Zap, Bug } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AnimatedButton from './AnimatedButton';
 import RatingDisplay from './RatingDisplay';
-import { useSimpleMatchmakingStore } from '../store/simpleMatchmakingStore';
+import { useMatchmaking } from '../hooks/useMatchmaking';
 import { useAuth } from '../hooks/useAuth';
 import { getRatingTier } from '../lib/elo';
 
@@ -29,32 +29,23 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
     currentMatch,
     showMatchModal,
     error,
-    queueStats,
     joinQueue,
     leaveQueue,
-    acceptMatch,
-    clearMatch,
     clearError,
-    loadQueueStats,
-  } = useSimpleMatchmakingStore();
+  } = useMatchmaking();
 
   const userTier = getRatingTier(profile?.rating || 1200);
-
-  // Load stats when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      loadQueueStats();
-    }
-  }, [isOpen, loadQueueStats]);
 
   // Handle joining queue
   const handleJoinQueue = async () => {
     if (!user?.id) return;
     
+    console.log('🎯 User clicked Find Quick Match');
     try {
-      await joinQueue(user.id, { mode });
+      await joinQueue(mode);
+      console.log('✅ Successfully initiated queue join');
     } catch (error) {
-      console.error('Failed to join queue:', error);
+      console.error('❌ Failed to join queue from modal:', error);
     }
   };
 
@@ -62,36 +53,19 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
   const handleLeaveQueue = async () => {
     if (!user?.id) return;
     
+    console.log('🚪 User clicked Cancel Search');
     try {
-      await leaveQueue(user.id);
+      await leaveQueue();
       onClose();
+      console.log('✅ Successfully left queue and closed modal');
     } catch (error) {
-      console.error('Failed to leave queue:', error);
+      console.error('❌ Failed to leave queue from modal:', error);
     }
   };
-
-  // Handle accepting match
-  const handleAcceptMatch = () => {
-    if (!currentMatch?.duel_id) return;
-    
-    acceptMatch();
-    onClose();
-    navigate(`/duel/${currentMatch.duel_id}`);
-  };
-
-  // Auto-accept match after 3 seconds
-  useEffect(() => {
-    if (currentMatch?.duel_id && showMatchModal) {
-      const timeout = setTimeout(() => {
-        handleAcceptMatch();
-      }, 3000);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [currentMatch, showMatchModal]);
 
   // Debug function
   const handleDebug = async () => {
+    console.log('🐛 Running matchmaking debug...');
     if (typeof window !== 'undefined' && (window as any).debugMatchmaking) {
       await (window as any).debugMatchmaking();
     } else {
@@ -101,7 +75,15 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
     }
   };
 
-  if (!isOpen && !showMatchModal) return null;
+  // Auto-close modal when match is found (handled by navigation in useMatchmaking)
+  useEffect(() => {
+    if (currentMatch?.duel_id) {
+      console.log('🎯 Match found in modal, navigation should be handled by hook');
+      onClose();
+    }
+  }, [currentMatch, onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
@@ -110,12 +92,7 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={() => {
-          if (currentMatch) {
-            clearMatch();
-          }
-          onClose();
-        }}
+        onClick={onClose}
       >
         <motion.div
           className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-gray-700"
@@ -151,12 +128,7 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
                 </button>
               )}
               <button
-                onClick={() => {
-                  if (currentMatch) {
-                    clearMatch();
-                  }
-                  onClose();
-                }}
+                onClick={onClose}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X className="h-5 w-5 text-gray-500" />
@@ -181,57 +153,8 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
             </motion.div>
           )}
 
-          {/* Match Found */}
-          {currentMatch && (
-            <motion.div
-              className="text-center mb-6"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 500 }}
-            >
-              <motion.div
-                className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 0.5, repeat: Infinity }}
-              >
-                <Users className="h-8 w-8 text-white" />
-              </motion.div>
-              <h3 className="text-lg font-bold text-green-500 mb-2">Match Found!</h3>
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Opponent:</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {currentMatch.opponent_name}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Rating:</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {currentMatch.opponent_rating}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Difference:</span>
-                  <span className="font-semibold text-blue-500">
-                    ±{currentMatch.rating_difference}
-                  </span>
-                </div>
-              </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Starting duel in 3 seconds...
-              </p>
-              <AnimatedButton
-                onClick={handleAcceptMatch}
-                variant="success"
-                className="w-full"
-              >
-                Start Duel Now
-              </AnimatedButton>
-            </motion.div>
-          )}
-
           {/* Queue Status */}
-          {isInQueue && !currentMatch && (
+          {isInQueue && (
             <div className="text-center mb-6">
               <div className="relative mb-4">
                 <motion.div
@@ -292,6 +215,7 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 <p>🎯 Looking for players with similar rating</p>
                 <p>⚡ Checking for matches every 3 seconds</p>
+                <p>🚀 Auto-navigation on match found</p>
               </div>
 
               <AnimatedButton
@@ -305,7 +229,7 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
           )}
 
           {/* Initial State */}
-          {!isInQueue && !isSearching && !currentMatch && (
+          {!isInQueue && !isSearching && (
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="h-8 w-8 text-blue-500" />
@@ -314,34 +238,20 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
                 Ready for Quick Matches?
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Simple FIFO queue matching - first come, first served with fair opponent selection.
+                Simple FIFO queue matching with automatic navigation to duels when matches are found.
               </p>
               
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  How it works:
+                  Enhanced Flow:
                 </h4>
                 <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                   <li>• Join queue and wait for opponent</li>
-                  <li>• Automatic pairing every 3 seconds</li>
-                  <li>• Race-free atomic matching</li>
-                  <li>• Real-time notifications</li>
+                  <li>• Auto-navigation when match found</li>
+                  <li>• Duel specs fetched automatically</li>
+                  <li>• Sandbox initialized and ready</li>
                 </ul>
               </div>
-
-              {/* Queue Stats */}
-              {queueStats && (
-                <div className="mb-6 grid grid-cols-2 gap-4 text-xs">
-                  <div className="text-center">
-                    <div className="font-bold text-blue-500">{queueStats.total_players}</div>
-                    <div className="text-gray-500">Players in Queue</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold text-green-500">~{Math.round(queueStats.avg_wait_seconds)}s</div>
-                    <div className="text-gray-500">Avg Wait Time</div>
-                  </div>
-                </div>
-              )}
 
               <div className="space-y-3">
                 <AnimatedButton
@@ -368,8 +278,8 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
           {/* Footer Stats */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>Simple FIFO matching</span>
-              <span>Checks every 3s</span>
+              <span>Auto-navigation enabled</span>
+              <span>Sandbox auto-init</span>
             </div>
           </div>
         </motion.div>
