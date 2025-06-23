@@ -14,7 +14,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { joinDuel, submitDuel } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { useFastMatchmakingStore } from '../../store/fastMatchmakingStore';
+import { useFastMatchmakingStore } from '../store/fastMatchmakingStore';
 import { useKeystrokeStore } from '../store/keystrokeStore';
 import { codeExecutionService, type ExecutionResult } from '../services/codeExecutionService';
 import { supabase } from '../lib/supabaseClient';
@@ -39,7 +39,7 @@ const DuelPage: React.FC = () => {
   const [speedBonus, setSpeedBonus] = useState<number | undefined>();
   const [performanceScore, setPerformanceScore] = useState<number | undefined>();
   const { user } = useAuth();
-  const { userRating, setUserRating, cancelSearch } = useFastMatchmakingStore();
+  const { userRating, setUserRating, clearMatch } = useFastMatchmakingStore();
   const { recordKeystroke } = useKeystrokeStore();
   
   // Clean up queue when component mounts (user navigated to duel)
@@ -47,8 +47,8 @@ const DuelPage: React.FC = () => {
     const cleanupQueue = async () => {
       if (user?.id) {
         try {
-          // Remove user from queue since they're now in a duel using the store
-          cancelSearch();
+          // Remove user from queue since they're now in a duel
+          clearMatch();
           console.log('🧹 Cleaned up user from queue on duel page load');
         } catch (error) {
           // Ignore errors - user might not be in queue
@@ -58,7 +58,7 @@ const DuelPage: React.FC = () => {
     };
     
     cleanupQueue();
-  }, [user?.id, cancelSearch]);
+  }, [user?.id, clearMatch]);
 
   useEffect(() => {
     const loadDuel = async () => {

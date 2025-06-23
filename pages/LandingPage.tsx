@@ -45,8 +45,8 @@ const LandingPage: React.FC = () => {
     if (selectedMode === 'practice') {
       navigate('/practice');
     } else if (selectedMode === 'ranked-duel') {
-      // Use fast matchmaking instead of lobby
-      setShowMatchmakingModal(true);
+      // Show both fast matchmaking and lobby options
+      navigate('/lobby');
     } else {
       // For other modes, redirect to dashboard for now
       navigate('/dashboard');
@@ -102,6 +102,14 @@ const LandingPage: React.FC = () => {
                 <AnimatedButton
                   variant="outline"
                   size="sm"
+                  onClick={() => navigate('/lobby')}
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Game Lobby
+                </AnimatedButton>
+                <AnimatedButton
+                  variant="outline"
+                  size="sm"
                   onClick={() => navigate('/dashboard')}
                 >
                   <User className="h-4 w-4 mr-1" />
@@ -150,7 +158,7 @@ const LandingPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            Lightning-Fast Duels
+            Instant Coding Showdown
           </motion.h1>
           <motion.p 
             className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-12 leading-relaxed"
@@ -158,8 +166,8 @@ const LandingPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Advanced ELO-based matchmaking finds your perfect opponent in seconds.
-            No waiting, just pure coding competition.
+            Choose your battle: browse public lobbies or get instant matches with our lightning-fast ELO system.
+            Every duel is a chance to prove your coding prowess.
           </motion.p>
 
           {/* Game Mode Selection */}
@@ -195,7 +203,7 @@ const LandingPage: React.FC = () => {
                       </div>
                     </div>
                     <p className="text-sm text-green-700 dark:text-green-300">
-                      Ready for instant matches? Our fast system finds opponents in seconds!
+                      Ready to compete? Browse lobbies or get matched instantly!
                     </p>
                   </div>
                 </div>
@@ -205,7 +213,7 @@ const LandingPage: React.FC = () => {
               {!user && (
                 <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                    Sign in to experience lightning-fast matchmaking and track your progress!
+                    Sign in to track your progress, compete in ranked matches, and unlock all features!
                   </p>
                   <div className="space-y-2">
                     <AnimatedButton
@@ -251,8 +259,8 @@ const LandingPage: React.FC = () => {
                   </>
                 ) : selectedMode === 'ranked-duel' ? (
                   <>
-                    <Zap className="h-5 w-5 mr-2" />
-                    Quick Match (30s avg)
+                    <Play className="h-5 w-5 mr-2" />
+                    Enter Game Lobby
                   </>
                 ) : (
                   <>
@@ -274,9 +282,9 @@ const LandingPage: React.FC = () => {
             transition={{ duration: 0.8, delay: 1.0 }}
           >
             {[
-              { icon: Zap, title: 'Lightning Matchmaking', desc: 'ELO-based matching in 30-60 seconds', color: 'text-blue-500' },
-              { icon: Trophy, title: 'Real-time Competition', desc: 'Live editor with instant feedback', color: 'text-green-500' },
-              { icon: BookOpen, title: 'Practice Mode', desc: 'Self-paced learning with hints', color: 'text-purple-500' },
+              { icon: Play, title: 'Public Lobbies', desc: 'Browse and join games hosted by other players', color: 'text-blue-500' },
+              { icon: Zap, title: 'Instant Matching', desc: 'ELO-based matching in 30-60 seconds', color: 'text-green-500' },
+              { icon: BookOpen, title: 'Practice Mode', desc: 'Self-paced learning with hints and guidance', color: 'text-purple-500' },
               { icon: Users, title: 'Smart Pairing', desc: 'Advanced algorithms find perfect matches', color: 'text-pink-500' },
             ].map((feature, index) => (
               <motion.div 
