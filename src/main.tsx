@@ -10,7 +10,7 @@ import LoginPage from './pages/LoginPage.tsx';
 import SignupPage from './pages/SignupPage.tsx';
 import AuthCallbackPage from './pages/AuthCallbackPage.tsx';
 import DashboardPage from './pages/DashboardPage.tsx';
-import LobbyPage from '../pages/LobbyPage.tsx';
+import LobbyPage from './pages/LobbyPage.tsx';
 import DuelPage from './pages/DuelPage.tsx';
 import PracticePage from './pages/PracticePage.tsx';
 import ProfilePage from './pages/ProfilePage.tsx';
