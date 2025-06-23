@@ -42,7 +42,7 @@ export async function getAllGames(): Promise<GameLobby[]> {
       time_limit,
       created_at,
       status,
-      users!duels_creator_id_fkey (
+      creator:users!creator_id (
         display_name,
         elo_rating,
         avatar_url
@@ -61,9 +61,9 @@ export async function getAllGames(): Promise<GameLobby[]> {
   return (duels || []).map((duel: any) => ({
     id: duel.id,
     host_id: duel.creator_id,
-    host_name: duel.users?.display_name || 'Unknown',
-    host_rating: duel.users?.elo_rating || 1200,
-    host_avatar: duel.users?.avatar_url,
+    host_name: duel.creator?.display_name || 'Unknown',
+    host_rating: duel.creator?.elo_rating || 1200,
+    host_avatar: duel.creator?.avatar_url,
     mode: duel.mode,
     difficulty: 'medium', // Default, could be stored in duel
     topic: 'algorithms', // Default, could be extracted from prompt

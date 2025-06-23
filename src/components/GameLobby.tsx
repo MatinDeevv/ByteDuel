@@ -397,6 +397,14 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ isOpen, onClose, onGa
     'dynamic-programming', 'recursion', 'sorting', 'searching', 'hash-tables'
   ];
 
+  const getModeIcon = (mode: string) => {
+    switch (mode) {
+      case 'ranked': return <Trophy className="h-4 w-4" />;
+      case 'casual': return <Target className="h-4 w-4" />;
+      default: return <Zap className="h-4 w-4" />;
+    }
+  };
+
   const handleCreate = async () => {
     setCreating(true);
     try {
