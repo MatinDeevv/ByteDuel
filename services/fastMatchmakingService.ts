@@ -2,7 +2,7 @@
  * Fast Matchmaking Service - ELO-based matching with instant connections
  * Prioritizes speed and fair matches based on skill rating
  */
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../src/lib/supabaseClient';
 
 export interface MatchmakingOptions {
   mode: 'ranked' | 'casual';
