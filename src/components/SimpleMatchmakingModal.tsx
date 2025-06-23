@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Users, Clock, Zap } from 'lucide-react';
+import { Search, X, Users, Clock, Zap, Bug } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AnimatedButton from './AnimatedButton';
 import RatingDisplay from './RatingDisplay';
@@ -90,6 +90,17 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
     }
   }, [currentMatch, showMatchModal]);
 
+  // Debug function
+  const handleDebug = async () => {
+    if (typeof window !== 'undefined' && (window as any).debugMatchmaking) {
+      await (window as any).debugMatchmaking();
+    } else {
+      // Import and run debug
+      const { debugMatchmaking } = await import('../services/debugMatchmaking');
+      await debugMatchmaking();
+    }
+  };
+
   if (!isOpen && !showMatchModal) return null;
 
   return (
@@ -128,17 +139,29 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                if (currentMatch) {
-                  clearMatch();
-                }
-                onClose();
-              }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5 text-gray-500" />
-            </button>
+            <div className="flex items-center space-x-2">
+              {/* Debug Button - Only in development */}
+              {process.env.NODE_ENV === 'development' && (
+                <button
+                  onClick={handleDebug}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Debug Matchmaking"
+                >
+                  <Bug className="h-5 w-5 text-orange-500" />
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (currentMatch) {
+                    clearMatch();
+                  }
+                  onClose();
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
           </div>
 
           {/* Error Display */}
@@ -268,7 +291,7 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
 
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 <p>🎯 Looking for players with similar rating</p>
-                <p>⚡ First-come, first-served matching</p>
+                <p>⚡ Checking for matches every 3 seconds</p>
               </div>
 
               <AnimatedButton
@@ -346,7 +369,7 @@ const SimpleMatchmakingModal: React.FC<SimpleMatchmakingModalProps> = ({
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>Simple FIFO matching</span>
-              <span>Avg wait ~30s</span>
+              <span>Checks every 3s</span>
             </div>
           </div>
         </motion.div>
