@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Send, Zap, CheckCircle } from 'lucide-react';
+import { Clock, Send, Zap, CheckCircle, Trophy } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import AnimatedButton from '../components/AnimatedButton';
 import AnimatedCard from '../components/AnimatedCard';
@@ -14,9 +14,10 @@ import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { joinDuel, submitDuel } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { useMatchmakingStore } from '../store/matchmakingStore';
+import { useFastMatchmakingStore } from '../store/fastMatchmakingStore';
 import { useKeystrokeStore } from '../store/keystrokeStore';
 import { codeExecutionService, type ExecutionResult } from '../services/codeExecutionService';
+import { supabase } from '../lib/supabaseClient';
 
 interface DuelData {
   prompt: string;
@@ -38,7 +39,7 @@ const DuelPage: React.FC = () => {
   const [speedBonus, setSpeedBonus] = useState<number | undefined>();
   const [performanceScore, setPerformanceScore] = useState<number | undefined>();
   const { user } = useAuth();
-  const { userRating, setUserRating } = useMatchmakingStore();
+  const { userRating, setUserRating, cancelSearch } = useFastMatchmakingStore();
   const { recordKeystroke } = useKeystrokeStore();
   
   // Clean up queue when component mounts (user navigated to duel)
@@ -47,7 +48,6 @@ const DuelPage: React.FC = () => {
       if (user?.id) {
         try {
           // Remove user from queue since they're now in a duel using the store
-          const { cancelSearch } = useMatchmakingStore.getState();
           cancelSearch();
           console.log('🧹 Cleaned up user from queue on duel page load');
         } catch (error) {
@@ -58,7 +58,7 @@ const DuelPage: React.FC = () => {
     };
     
     cleanupQueue();
-  }, [user?.id]);
+  }, [user?.id, cancelSearch]);
 
   useEffect(() => {
     const loadDuel = async () => {
