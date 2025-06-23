@@ -31,7 +31,7 @@ export interface MatchFoundPayload {
 }
 
 class SimpleMatchmakingService {
-  private channel: RealtimeChannel | null = null;
+  private channels: Map<string, RealtimeChannel> = new Map();
   private userId: string | null = null;
   private matchFoundCallback: ((payload: MatchFoundPayload) => void) | null = null;
   private statusUpdateCallback: ((status: QueueStatus) => void) | null = null;
@@ -57,7 +57,7 @@ class SimpleMatchmakingService {
       console.log('✅ Successfully enqueued player:', data);
 
       // Set up real-time subscription for this user
-      this.setupRealtimeSubscription(userId);
+      await this.setupRealtimeSubscription(userId);
 
       // Start status polling
       this.startStatusPolling(userId);
@@ -160,30 +160,33 @@ class SimpleMatchmakingService {
     try {
       console.log('🎮 Creating duel for match:', matchData);
 
-      // Create duel
+      // Create duel with only existing columns
+      const duelData = {
+        creator_id: matchData.player1_id,
+        opponent_id: matchData.player2_id,
+        mode,
+        prompt: 'Two Sum Challenge: Find two numbers in an array that add up to a target sum. Return their indices.',
+        test_cases: [
+          {"input": "[2, 7, 11, 15], 9", "expected": "[0, 1]"},
+          {"input": "[3, 2, 4], 6", "expected": "[1, 2]"},
+          {"input": "[3, 3], 6", "expected": "[0, 1]"}
+        ],
+        time_limit: 900,
+        status: 'active',
+        started_at: new Date().toISOString(),
+      };
+
+      console.log('📝 Inserting duel with data:', duelData);
+
       const { data: duel, error: duelError } = await supabase
         .from('duels')
-        .insert({
-          creator_id: matchData.player1_id,
-          opponent_id: matchData.player2_id,
-          mode,
-          prompt: 'Two Sum Challenge: Find two numbers in an array that add up to a target sum. Return their indices.',
-          test_cases: [
-            {"input": "[2, 7, 11, 15], 9", "expected": "[0, 1]"},
-            {"input": "[3, 2, 4], 6", "expected": "[1, 2]"},
-            {"input": "[3, 3], 6", "expected": "[0, 1]"}
-          ],
-          time_limit: 900,
-          status: 'active',
-          started_at: new Date().toISOString(),
-          average_rating: Math.round((matchData.player1_rating + matchData.player2_rating) / 2),
-          rating_difference: matchData.rating_difference,
-        })
+        .insert(duelData)
         .select()
         .single();
 
       if (duelError) {
         console.error('❌ Failed to create duel:', duelError);
+        console.error('❌ Duel data that failed:', duelData);
         return;
       }
 
@@ -219,6 +222,18 @@ class SimpleMatchmakingService {
       console.log('📡 Notified both players about match:', duel.id);
     } catch (error) {
       console.error('💥 Error handling match result:', error);
+      
+      // Try to re-queue the players if duel creation failed
+      try {
+        console.log('🔄 Re-queueing players due to error...');
+        await Promise.all([
+          supabase.rpc('enqueue_player', { p_user_id: matchData.player1_id, p_mode: mode }),
+          supabase.rpc('enqueue_player', { p_user_id: matchData.player2_id, p_mode: mode }),
+        ]);
+        console.log('✅ Successfully re-queued both players');
+      } catch (requeueError) {
+        console.error('💥 Error re-queueing players:', requeueError);
+      }
     }
   }
 
@@ -227,34 +242,35 @@ class SimpleMatchmakingService {
    */
   private async notifyPlayer(userId: string, payload: MatchFoundPayload) {
     try {
-      const channel = supabase.channel(`user_${userId}_notifications`);
+      console.log(`📤 Notifying user ${userId} about match`);
+
+      // Try to send via existing channel first
+      const channelKey = `user_${userId}_notifications`;
+      const existingChannel = this.channels.get(channelKey);
       
-      await channel
-        .send({
+      if (existingChannel) {
+        console.log(`📡 Using existing channel for user ${userId}`);
+        await existingChannel.send({
           type: 'broadcast',
           event: 'match_found',
           payload,
-        })
-        .then(() => {
-          console.log(`📤 Sent notification to user ${userId}`);
         });
-
-      // Also try alternative notification method
-      await supabase
-        .from('user_notifications')
-        .insert({
-          user_id: userId,
-          type: 'match_found',
-          data: payload,
-          created_at: new Date().toISOString(),
-        })
-        .then(() => {
-          console.log(`📝 Stored notification for user ${userId}`);
-        })
-        .catch((error) => {
-          console.log('📝 No user_notifications table, skipping storage');
+      } else {
+        console.log(`📡 Creating new notification channel for user ${userId}`);
+        // Create a new channel for notification
+        const notificationChannel = supabase.channel(channelKey);
+        
+        await notificationChannel.send({
+          type: 'broadcast',
+          event: 'match_found',
+          payload,
         });
-
+        
+        // Don't store this channel as it's just for notification
+        await notificationChannel.unsubscribe();
+      }
+      
+      console.log(`✅ Notification sent to user ${userId}`);
     } catch (error) {
       console.error(`❌ Failed to notify user ${userId}:`, error);
     }
@@ -263,21 +279,26 @@ class SimpleMatchmakingService {
   /**
    * Set up real-time subscription for match notifications
    */
-  private setupRealtimeSubscription(userId: string) {
+  private async setupRealtimeSubscription(userId: string) {
     this.userId = userId;
     
-    // Clean up existing subscription
-    if (this.channel) {
-      this.channel.unsubscribe();
+    // Clean up existing subscription for this user
+    const channelKey = `user_${userId}_notifications`;
+    const existingChannel = this.channels.get(channelKey);
+    
+    if (existingChannel) {
+      console.log(`🧹 Cleaning up existing subscription for user ${userId}`);
+      await existingChannel.unsubscribe();
+      this.channels.delete(channelKey);
     }
 
     console.log(`📡 Setting up realtime subscription for user ${userId}`);
 
     // Create new channel for this user
-    this.channel = supabase.channel(`user_${userId}_notifications`);
+    const channel = supabase.channel(channelKey);
 
     // Listen for match found events
-    this.channel.on('broadcast', { event: 'match_found' }, (payload) => {
+    channel.on('broadcast', { event: 'match_found' }, (payload) => {
       console.log('🎉 Match found notification received:', payload);
       
       if (this.matchFoundCallback) {
@@ -286,30 +307,17 @@ class SimpleMatchmakingService {
     });
 
     // Subscribe to the channel
-    this.channel.subscribe((status) => {
+    const subscribePromise = channel.subscribe((status) => {
       console.log(`📡 Realtime subscription status for ${userId}:`, status);
     });
 
-    // Also listen for database changes (alternative method)
-    const dbChannel = supabase.channel(`user_${userId}_db_notifications`);
-    
-    dbChannel.on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'user_notifications',
-        filter: `user_id=eq.${userId}`,
-      },
-      (payload) => {
-        console.log('📬 Database notification received:', payload);
-        if (payload.new?.type === 'match_found' && this.matchFoundCallback) {
-          this.matchFoundCallback(payload.new.data as MatchFoundPayload);
-        }
-      }
-    );
+    // Store the channel
+    this.channels.set(channelKey, channel);
 
-    dbChannel.subscribe();
+    // Wait for subscription to complete
+    await subscribePromise;
+    
+    console.log(`✅ Realtime subscription established for user ${userId}`);
   }
 
   /**
@@ -385,10 +393,14 @@ class SimpleMatchmakingService {
    * Clean up subscriptions and callbacks
    */
   cleanup() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+    console.log('🧹 Cleaning up matchmaking service...');
+    
+    // Unsubscribe from all channels
+    for (const [key, channel] of this.channels.entries()) {
+      console.log(`🧹 Unsubscribing from channel: ${key}`);
+      channel.unsubscribe();
     }
+    this.channels.clear();
     
     if (this.statusPollInterval) {
       clearInterval(this.statusPollInterval);
@@ -398,6 +410,8 @@ class SimpleMatchmakingService {
     this.userId = null;
     this.matchFoundCallback = null;
     this.statusUpdateCallback = null;
+    
+    console.log('✅ Matchmaking service cleanup complete');
   }
 }
 

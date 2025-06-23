@@ -16,6 +16,9 @@ interface SimpleMatchmakingState {
   currentMatch: MatchFoundPayload | null;
   showMatchModal: boolean;
   
+  // User preferences
+  userRating: number;
+  
   // UI state
   error: string | null;
   
@@ -32,6 +35,9 @@ interface SimpleMatchmakingActions {
   // Match actions
   acceptMatch: () => void;
   clearMatch: () => void;
+  
+  // Preferences
+  setUserRating: (rating: number) => void;
   
   // UI actions
   setShowMatchModal: (show: boolean) => void;
@@ -53,6 +59,7 @@ export const useSimpleMatchmakingStore = create<SimpleMatchmakingStore>((set, ge
   queueStatus: null,
   currentMatch: null,
   showMatchModal: false,
+  userRating: 1200,
   error: null,
   queueStats: null,
 
@@ -171,6 +178,11 @@ export const useSimpleMatchmakingStore = create<SimpleMatchmakingStore>((set, ge
       queueStatus: null,
       isSearching: false,
     });
+  },
+
+  // Preferences
+  setUserRating: (rating: number) => {
+    set({ userRating: rating });
   },
 
   // UI actions
