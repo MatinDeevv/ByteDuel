@@ -337,15 +337,20 @@ const PracticePage: React.FC = () => {
                       onClick={() => setSelectedDifficulty(difficulty)}
                       className={`
                         flex-1 py-3 px-4 rounded-lg border-2 transition-all duration-300 capitalize
-                <CodeExecutionPanel
-                  code={code}
-                  testCases={practiceData.tests}
-                  onExecutionComplete={handleExecutionComplete}
-                  language="javascript"
-                  userId={user?.id}
-                />
+                        ${selectedDifficulty === difficulty
+                          ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                        }
+                      `}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {difficulty}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-           </AnimatedCard>
+            </AnimatedCard>
           </motion.div>
 
           {/* Start Button */}
