@@ -12,11 +12,13 @@ import {
   ChevronDown,
   Info,
   TrendingUp,
-  Shield
+  Shield,
+  Bug
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AnimatedButton from './AnimatedButton';
 import RatingDisplay from './RatingDisplay';
+import MatchmakingDebugPanel from './MatchmakingDebugPanel';
 import { useAdvancedMatchmakingStore } from '../../store/advancedMatchmakingStore';
 import { useAuth } from '../hooks/useAuth';
 import { getRatingTier } from '../lib/elo';
@@ -58,6 +60,7 @@ const AdvancedMatchmakingModal: React.FC<AdvancedMatchmakingModalProps> = ({
   } = useAdvancedMatchmakingStore();
 
   const [selectedMode, setSelectedMode] = useState<'ranked' | 'casual'>('ranked');
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   const userTier = getRatingTier(profile?.elo_rating || userRating);
   const timeControls = advancedMatchmakingService.getAvailableTimeControls();
 
@@ -194,6 +197,17 @@ const AdvancedMatchmakingModal: React.FC<AdvancedMatchmakingModalProps> = ({
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Debug Button - Only in development */}
+              {process.env.NODE_ENV === 'development' && (
+                <button
+                  onClick={() => setShowDebugPanel(!showDebugPanel)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Debug Panel"
+                >
+                  <Bug className="h-5 w-5 text-orange-500" />
+                </button>
+              )}
+              
               <button
                 onClick={() => setShowOptionsModal(!showOptionsModal)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -497,7 +511,7 @@ const AdvancedMatchmakingModal: React.FC<AdvancedMatchmakingModalProps> = ({
                   How Smart Matching Works
                 </h4>
                 <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <li>• Starts with ±25 rating range, expands intelligently</li>
+                  <li>• Starts with ±50 rating range, expands intelligently</li>
                   <li>• Fair play pools separate problematic players</li>
                   <li>• Color balancing based on recent games</li>
                   <li>• Avoids immediate rematches</li>
@@ -531,6 +545,7 @@ const AdvancedMatchmakingModal: React.FC<AdvancedMatchmakingModalProps> = ({
                   <div className="text-center">
                     <div className="font-bold text-green-500">~{Math.round(matchmakingStats.averageWaitSeconds)}s</div>
                     <div className="text-gray-500">Avg Wait Time</div>
+                  
                   </div>
                 </div>
               )}
@@ -566,6 +581,12 @@ const AdvancedMatchmakingModal: React.FC<AdvancedMatchmakingModalProps> = ({
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Debug Panel */}
+      <MatchmakingDebugPanel
+        isOpen={showDebugPanel}
+        onClose={() => setShowDebugPanel(false)}
+      />
     </AnimatePresence>
   );
 };
