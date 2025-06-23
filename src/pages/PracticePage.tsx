@@ -190,18 +190,13 @@ const PracticePage: React.FC = () => {
 
               <AnimatedCard delay={0.4}>
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Test Cases</h3>
-                  <div className="space-y-4">
-                    {practiceData.tests.map((test, index) => (
-                      <TestCaseAnimation
-                        key={index}
-                        status={testResults[index]?.status || 'pending'}
-                        input={test.input}
-                        expected={test.expected}
-                        index={index}
-                      />
-                    ))}
-                  </div>
+                  <CodeExecutionPanel
+                    code={code}
+                    testCases={practiceData.tests}
+                    onExecutionComplete={handleExecutionComplete}
+                    language="javascript"
+                    userId={user?.id}
+                  />
                 </div>
               </AnimatedCard>
             </div>

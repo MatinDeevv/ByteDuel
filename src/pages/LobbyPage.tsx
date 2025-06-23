@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Zap } from 'lucide-react';
 import AnimatedButton from '../components/AnimatedButton';
 import StandardizedLobby from '../components/StandardizedLobby';
-import { useErrorHandler } from '../hooks/useErrorHandler';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { useAuth } from '../hooks/useAuth';
@@ -12,19 +11,6 @@ import { useAuth } from '../hooks/useAuth';
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const { handleError } = useErrorHandler();
-
-  // Handle any errors that might occur in the lobby
-  useEffect(() => {
-    const handleLobbyError = (error: any) => {
-      console.error('Lobby error:', error);
-      handleError(error, { redirectToHome: false, showAlert: true });
-    };
-
-    // Add error event listener
-    window.addEventListener('lobbyError', handleLobbyError);
-    return () => window.removeEventListener('lobbyError', handleLobbyError);
-  }, [handleError]);
 
   return (
     <PageTransition>

@@ -3,12 +3,10 @@ import { AnimatePresence } from 'framer-motion';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
-import { useErrorHandler } from './hooks/useErrorHandler';
 
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { handleError } = useErrorHandler();
 
   // Handle any unhandled promise rejections
   useEffect(() => {
@@ -29,7 +27,7 @@ function App() {
 
   // Handle navigation errors
   useEffect(() => {
-    const handleError = (error: ErrorEvent) => {
+    const handleGlobalError = (error: ErrorEvent) => {
       console.error('Global error:', error);
       
       // Check if it's a routing or 404 error
@@ -38,8 +36,8 @@ function App() {
       }
     };
 
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
+    window.addEventListener('error', handleGlobalError);
+    return () => window.removeEventListener('error', handleGlobalError);
   }, [navigate]);
 
   return (
