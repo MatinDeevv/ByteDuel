@@ -68,6 +68,9 @@ export const useMatchmakingStore = create<MatchmakingStore>((set, get) => ({
       // Join the real matchmaking queue
       await joinMatchmakingQueue(user.id, mode);
 
+      // Force immediate matchmaking check for instant connections
+      const { backgroundMatchmaker } = await import('../services/backgroundMatchmaker');
+      backgroundMatchmaker.forceMatch();
       // Start polling for matches and queue status
       const pollInterval = setInterval(async () => {
         try {
@@ -117,7 +120,7 @@ export const useMatchmakingStore = create<MatchmakingStore>((set, get) => ({
         } catch (error) {
           console.error('Polling error:', error);
         }
-      }, 2000); // Poll every 2 seconds
+      }, 1000); // Poll every 1 second for faster response
 
       // Clean up after 120 seconds if no match found
       setTimeout(() => {

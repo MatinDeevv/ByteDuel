@@ -10,7 +10,7 @@ class BackgroundMatchmaker {
   private intervalMs: number;
   private hasAddedDemoUsers = false;
 
-  constructor(intervalMs: number = 5000) {
+  constructor(intervalMs: number = 2000) { // Reduced to 2 seconds for faster matching
     this.intervalMs = intervalMs;
   }
 
@@ -21,7 +21,7 @@ class BackgroundMatchmaker {
     }
 
     this.isRunning = true;
-    console.log(`🚀 Starting background matchmaker (interval: ${this.intervalMs}ms)`);
+    console.log(`🚀 Starting enhanced background matchmaker (interval: ${this.intervalMs}ms)`);
 
     // Add demo users once on startup
     if (!this.hasAddedDemoUsers) {
@@ -32,13 +32,13 @@ class BackgroundMatchmaker {
         } catch (error) {
           console.log('Demo users already exist or error:', error);
         }
-      }, 2000);
+      }, 1000); // Reduced delay
     }
 
-    // Run immediately
+    // Run immediately for instant matching
     this.runMatchmaking();
 
-    // Then run on interval
+    // Then run on faster interval for real-time matching
     this.intervalId = setInterval(() => {
       this.runMatchmaking();
     }, this.intervalMs);
@@ -76,11 +76,17 @@ class BackgroundMatchmaker {
       intervalMs: this.intervalMs,
     };
   }
+
+  // Force immediate matchmaking run
+  forceMatch(): Promise<void> {
+    console.log('🔥 Forcing immediate matchmaking run...');
+    return this.runMatchmaking();
+  }
 }
 
-// Create singleton instance
+// Create singleton instance with faster interval
 export const backgroundMatchmaker = new BackgroundMatchmaker(
-  parseInt(import.meta.env.VITE_MATCHMAKER_INTERVAL || '5000')
+  parseInt(import.meta.env.VITE_MATCHMAKER_INTERVAL || '2000')
 );
 
 // Auto-start in development and production
