@@ -100,6 +100,65 @@ function maxProfit(prices) {
       tags: ['arrays', 'dynamic-programming', 'greedy'],
     },
     {
+      prompt: `Implement a function to find the longest common subsequence.
+
+Given two strings, find the length of their longest common subsequence.
+A subsequence is a sequence that can be derived from another sequence by deleting some or no elements without changing the order of the remaining elements.
+
+Examples:
+- "abcde", "ace" → 3 (subsequence "ace")
+- "abc", "abc" → 3 (entire string)
+- "abc", "def" → 0 (no common subsequence)
+- "ABCDGH", "AEDFHR" → 3 (subsequence "ADH")
+
+Function signature:
+function longestCommonSubsequence(text1, text2) {
+  // Your code here
+}`,
+      tests: [
+        { input: '"abcde", "ace"', expected: '3' },
+        { input: '"abc", "abc"', expected: '3' },
+        { input: '"abc", "def"', expected: '0' },
+        { input: '"ABCDGH", "AEDFHR"', expected: '3' },
+        { input: '"", "abc"', expected: '0' },
+        { input: '"abc", ""', expected: '0' },
+      ],
+      difficulty: 'medium',
+      tags: ['dynamic-programming', 'strings', 'subsequence'],
+    },
+    {
+      prompt: `Implement a function to validate a binary search tree.
+
+Given the root of a binary tree, determine if it is a valid binary search tree (BST).
+
+A valid BST is defined as follows:
+- The left subtree of a node contains only nodes with keys less than the node's key
+- The right subtree of a node contains only nodes with keys greater than the node's key
+- Both the left and right subtrees must also be binary search trees
+
+Tree node structure:
+class TreeNode {
+  constructor(val, left = null, right = null) {
+    this.val = val;
+    this.left = left;
+    this.right = right;
+  }
+}
+
+Function signature:
+function isValidBST(root) {
+  // Your code here
+}`,
+      tests: [
+        { input: 'new TreeNode(2, new TreeNode(1), new TreeNode(3))', expected: 'true' },
+        { input: 'new TreeNode(5, new TreeNode(1), new TreeNode(4, new TreeNode(3), new TreeNode(6)))', expected: 'false' },
+        { input: 'new TreeNode(1)', expected: 'true' },
+        { input: 'null', expected: 'true' },
+      ],
+      difficulty: 'medium',
+      tags: ['trees', 'binary-search-tree', 'recursion'],
+    },
+    {
       prompt: `Write a function that finds the two numbers in an array that add up to a target sum.
 
 Given an array of integers and a target sum, return the indices of the two numbers that add up to the target.

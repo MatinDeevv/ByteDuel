@@ -9,12 +9,14 @@ import AnimatedTimer from '../components/AnimatedTimer';
 import TestCaseAnimation from '../components/TestCaseAnimation';
 import ConfettiEffect from '../components/ConfettiEffect';
 import RatingDisplay from '../components/RatingDisplay';
+import CodeExecutionPanel from '../components/CodeExecutionPanel';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { joinDuel, submitDuel } from '../services/api';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../hooks/useAuth';
 import { useMatchmakingStore } from '../store/matchmakingStore';
 import { useKeystrokeStore } from '../store/keystrokeStore';
+import { codeExecutionService, type ExecutionResult } from '../services/codeExecutionService';
 
 interface DuelData {
   prompt: string;
@@ -29,10 +31,11 @@ const DuelPage: React.FC = () => {
   const [code, setCode] = useState('// Your solution here\nfunction solve() {\n  \n}');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [testResults, setTestResults] = useState<Array<{ status: 'pending' | 'passed' | 'failed'; actual?: string }>>([]);
+  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes default
+  const [lastExecutionResult, setLastExecutionResult] = useState<ExecutionResult | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [ratingDelta, setRatingDelta] = useState<number | undefined>();
+  const { user } = useAuth();
   const { userRating, setUserRating } = useMatchmakingStore();
   const { recordKeystroke } = useKeystrokeStore();
 
@@ -43,8 +46,7 @@ const DuelPage: React.FC = () => {
       try {
         const data = await joinDuel(id);
         setDuelData(data);
-        setTimeLeft(data.timeLimit);
-        setTestResults(data.tests.map(() => ({ status: 'pending' })));
+        setTimeLeft(data.timeLimit || 900);
       } catch (error) {
         console.error('Failed to load duel:', error);
         navigate('/');
@@ -69,16 +71,15 @@ const DuelPage: React.FC = () => {
   const handleSubmit = async () => {
     if (!id) return;
 
+    // Check if code has been tested
+    if (!lastExecutionResult || !lastExecutionResult.passed) {
+      alert('Please test your code and ensure all tests pass before submitting!');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const result = await submitDuel(id, code);
-      
-      // Simulate test results for animation
-      const newResults = duelData!.tests.map((_, index) => ({
-        status: index < result.passedTests ? 'passed' as const : 'failed' as const,
-        actual: index >= result.passedTests ? 'incorrect output' : undefined,
-      }));
-      setTestResults(newResults);
       
       setSubmitted(true);
       
@@ -105,6 +106,10 @@ const DuelPage: React.FC = () => {
     if (!submitted) {
       handleSubmit();
     }
+  };
+
+  const handleExecutionComplete = (result: ExecutionResult) => {
+    setLastExecutionResult(result);
   };
 
   if (!duelData) {
@@ -159,10 +164,12 @@ const DuelPage: React.FC = () => {
               size="sm"
             />
             <ThemeToggle />
+            
+            {/* Submit Button */}
             <AnimatedButton
               onClick={handleSubmit}
               disabled={isSubmitting || submitted}
-              variant={submitted ? "success" : "primary"}
+              variant={submitted ? "success" : lastExecutionResult?.passed ? "primary" : "outline"}
               size="sm"
               loading={isSubmitting}
             >
@@ -175,7 +182,7 @@ const DuelPage: React.FC = () => {
                 ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Submit
+                  {lastExecutionResult?.passed ? 'Submit Solution' : 'Test First'}
                 </>
                 )
               )}
@@ -202,21 +209,16 @@ const DuelPage: React.FC = () => {
               </div>
             </AnimatedCard>
 
-            <AnimatedCard delay={0.2}>
+            {/* Code Execution Panel */}
+            <AnimatedCard delay={0.4}>
               <div className="p-6">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Test Cases</h3>
-                <div className="space-y-4">
-                  {duelData.tests.map((test, index) => (
-                    <TestCaseAnimation
-                      key={index}
-                      status={testResults[index]?.status || 'pending'}
-                      input={test.input}
-                      expected={test.expected}
-                      actual={testResults[index]?.actual}
-                      index={index}
-                    />
-                  ))}
-                </div>
+                <CodeExecutionPanel
+                  code={code}
+                  testCases={duelData.tests}
+                  onExecutionComplete={handleExecutionComplete}
+                  language="javascript"
+                  userId={user?.id}
+                />
               </div>
             </AnimatedCard>
           </div>

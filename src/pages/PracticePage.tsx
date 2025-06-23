@@ -6,11 +6,13 @@ import Editor from '@monaco-editor/react';
 import AnimatedButton from '../components/AnimatedButton';
 import AnimatedCard from '../components/AnimatedCard';
 import TestCaseAnimation from '../components/TestCaseAnimation';
+import CodeExecutionPanel from '../components/CodeExecutionPanel';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { PracticeMode, Difficulty } from '../types';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../hooks/useAuth';
 import { startPractice, submitPractice } from '../services/api';
+import { type ExecutionResult } from '../services/codeExecutionService';
 
 interface PracticeData {
   sessionId: string;
@@ -29,7 +31,8 @@ const PracticePage: React.FC = () => {
   const [hintsUsed, setHintsUsed] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [testResults, setTestResults] = useState<Array<{ status: 'pending' | 'passed' | 'failed' }>>([]);
+  const [lastExecutionResult, setLastExecutionResult] = useState<ExecutionResult | null>(null);
+  const { user } = useAuth();
 
   const practiceModes = [
     {
@@ -72,15 +75,15 @@ const PracticePage: React.FC = () => {
   const handleSubmit = async () => {
     if (!practiceData) return;
 
+    // Check if code has been tested
+    if (!lastExecutionResult) {
+      alert('Please test your code first!');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const result = await submitPractice(practiceData.sessionId, code);
-      
-      // Simulate test results
-      const newResults = practiceData.tests.map((_, index) => ({
-        status: index < result.passedTests ? 'passed' as const : 'failed' as const,
-      }));
-      setTestResults(newResults);
       
       console.log('Practice result:', result);
       // Handle result feedback
@@ -94,6 +97,10 @@ const PracticePage: React.FC = () => {
   const handleShowHint = () => {
     setShowHint(true);
     setHintsUsed(prev => prev + 1);
+  };
+
+  const handleExecutionComplete = (result: ExecutionResult) => {
+    setLastExecutionResult(result);
   };
 
   if (practiceData) {
@@ -141,11 +148,11 @@ const PracticePage: React.FC = () => {
               <AnimatedButton
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                variant="primary"
+                variant={lastExecutionResult?.passed ? "success" : "primary"}
                 size="sm"
                 loading={isSubmitting}
               >
-                Check Solution
+                {lastExecutionResult?.passed ? 'Submit Solution' : 'Check Solution'}
               </AnimatedButton>
             </div>
           </div>
@@ -302,7 +309,8 @@ const PracticePage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <AnimatedCard delay={0.4}>
+            {/* Code Execution Panel */}
+            <AnimatedCard delay={0.6}>
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Topic</h3>
                 <select
@@ -329,18 +337,13 @@ const PracticePage: React.FC = () => {
                       onClick={() => setSelectedDifficulty(difficulty)}
                       className={`
                         flex-1 py-3 px-4 rounded-lg border-2 transition-all duration-300 capitalize
-                        ${selectedDifficulty === difficulty
-                          ? 'border-purple-500 bg-purple-500/10 text-purple-500'
-                          : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300'
-                        }
-                      `}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {difficulty}
-                    </motion.button>
-                  ))}
-                </div>
+                <CodeExecutionPanel
+                  code={code}
+                  testCases={practiceData.tests}
+                  onExecutionComplete={handleExecutionComplete}
+                  language="javascript"
+                  userId={user?.id}
+                />
               </div>
            </AnimatedCard>
           </motion.div>
