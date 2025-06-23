@@ -355,8 +355,6 @@ if (finalUrl === defaultUrl || finalKey === defaultKey) {
   // Override supabase methods for demo
   const originalFrom = supabase.from.bind(supabase);
   supabase.from = (table: string) => {
-    const originalQuery = originalFrom(table);
-    
     // Mock successful responses for demo
     const mockResponse = {
       data: [],
@@ -364,20 +362,36 @@ if (finalUrl === defaultUrl || finalKey === defaultKey) {
       count: 0,
     };
     
-    return {
-      ...originalQuery,
-      select: () => ({ ...mockResponse, single: () => mockResponse }),
-      insert: () => ({ ...mockResponse, single: () => mockResponse }),
-      update: () => ({ ...mockResponse, single: () => mockResponse }),
-      delete: () => mockResponse,
-      upsert: () => ({ ...mockResponse, single: () => mockResponse }),
-      eq: () => ({ ...mockResponse, single: () => mockResponse }),
-      neq: () => ({ ...mockResponse, single: () => mockResponse }),
-      gte: () => ({ ...mockResponse, single: () => mockResponse }),
-      lte: () => ({ ...mockResponse, single: () => mockResponse }),
-      order: () => ({ ...mockResponse, single: () => mockResponse }),
-      limit: () => ({ ...mockResponse, single: () => mockResponse }),
-      single: () => mockResponse,
+    // Create a chainable mock query builder
+    const createMockQueryBuilder = (): any => {
+      const builder = {
+        ...mockResponse,
+        select: () => createMockQueryBuilder(),
+        insert: () => createMockQueryBuilder(),
+        update: () => createMockQueryBuilder(),
+        delete: () => createMockQueryBuilder(),
+        upsert: () => createMockQueryBuilder(),
+        eq: () => createMockQueryBuilder(),
+        neq: () => createMockQueryBuilder(),
+        gte: () => createMockQueryBuilder(),
+        lte: () => createMockQueryBuilder(),
+        gt: () => createMockQueryBuilder(),
+        lt: () => createMockQueryBuilder(),
+        like: () => createMockQueryBuilder(),
+        ilike: () => createMockQueryBuilder(),
+        in: () => createMockQueryBuilder(),
+        is: () => createMockQueryBuilder(),
+        order: () => createMockQueryBuilder(),
+        limit: () => createMockQueryBuilder(),
+        range: () => createMockQueryBuilder(),
+        single: () => Promise.resolve(mockResponse),
+        maybeSingle: () => Promise.resolve(mockResponse),
+        then: (resolve: any) => Promise.resolve(mockResponse).then(resolve),
+        catch: (reject: any) => Promise.resolve(mockResponse).catch(reject),
+      };
+      return builder;
     };
+    
+    return createMockQueryBuilder();
   };
 }
