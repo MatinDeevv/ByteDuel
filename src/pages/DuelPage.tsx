@@ -14,7 +14,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
 import { joinDuel, submitDuel } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { useFastMatchmakingStore } from '../../store/fastMatchmakingStore';
+import { useSimpleMatchmakingStore } from '../store/simpleMatchmakingStore';
 import { useKeystrokeStore } from '../store/keystrokeStore';
 import { codeExecutionService, type ExecutionResult } from '../services/codeExecutionService';
 import { supabase } from '../lib/supabaseClient';
@@ -39,7 +39,7 @@ const DuelPage: React.FC = () => {
   const [speedBonus, setSpeedBonus] = useState<number | undefined>();
   const [performanceScore, setPerformanceScore] = useState<number | undefined>();
   const { user } = useAuth();
-  const { userRating, setUserRating, clearMatch } = useFastMatchmakingStore();
+  const { userRating, setUserRating, clearMatch } = useSimpleMatchmakingStore();
   const { recordKeystroke } = useKeystrokeStore();
   
   // Clean up queue when component mounts (user navigated to duel)
