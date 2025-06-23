@@ -168,11 +168,14 @@ export const useMatchmakingStore = create<MatchmakingStore>((set, get) => ({
 
   cancelSearch: async () => {
     try {
+      console.log('🚪 Canceling search and cleaning up queue...');
+      
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         // Remove from real matchmaking queue
         await leaveMatchmakingQueue(user.id);
+        console.log('✅ User removed from queue successfully');
       }
 
       set({ 
@@ -182,6 +185,8 @@ export const useMatchmakingStore = create<MatchmakingStore>((set, get) => ({
         estimatedWaitTime: undefined,
         error: null 
       });
+      
+      console.log('✅ Search canceled and queue cleaned up');
     } catch (error) {
       console.error('Failed to cancel search:', error);
       set({ 

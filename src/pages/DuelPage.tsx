@@ -40,6 +40,25 @@ const DuelPage: React.FC = () => {
   const { user } = useAuth();
   const { userRating, setUserRating } = useMatchmakingStore();
   const { recordKeystroke } = useKeystrokeStore();
+  
+  // Clean up queue when component mounts (user navigated to duel)
+  useEffect(() => {
+    const cleanupQueue = async () => {
+      if (user?.id) {
+        try {
+          // Remove user from queue since they're now in a duel
+          const { leaveMatchmakingQueue } = await import('../services/matchmakingService');
+          await leaveMatchmakingQueue(user.id);
+          console.log('🧹 Cleaned up user from queue on duel page load');
+        } catch (error) {
+          // Ignore errors - user might not be in queue
+          console.log('Queue cleanup: User not in queue or already removed');
+        }
+      }
+    };
+    
+    cleanupQueue();
+  }, [user?.id]);
 
   useEffect(() => {
     const loadDuel = async () => {

@@ -61,12 +61,30 @@ class BackgroundMatchmaker {
 
   private async runMatchmaking(): Promise<void> {
     try {
+      // Clean up stale queue entries first
+      await this.cleanupStaleEntries();
+      
       const matchesCreated = await processMatchmaking();
       if (matchesCreated > 0) {
         console.log(`🎉 Background matchmaker created ${matchesCreated} matches`);
       }
     } catch (error) {
       console.error('💥 Background matchmaker error:', error);
+    }
+  }
+  
+  private async cleanupStaleEntries(): Promise<void> {
+    try {
+      const { data, error } = await supabase.rpc('cleanup_stale_queue_entries');
+      
+      if (error) {
+        console.warn('Failed to cleanup stale entries:', error);
+      } else if (data > 0) {
+        console.log(`🧹 Cleaned up ${data} stale queue entries`);
+      }
+    } catch (error) {
+      // Ignore cleanup errors
+      console.warn('Queue cleanup error:', error);
     }
   }
 

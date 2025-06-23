@@ -62,6 +62,7 @@ const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onClose }) 
 
   const handleCancelSearch = async () => {
     try {
+      console.log('🛑 User clicked cancel search');
       await cancelSearch();
       onClose();
     } catch (error) {

@@ -58,10 +58,23 @@ export async function leaveMatchmakingQueue(userId: string): Promise<void> {
     .eq('user_id', userId);
 
   if (error) {
+    console.error('❌ Failed to remove user from queue:', error);
     throw new Error(`Failed to leave queue: ${error.message}`);
   }
 
   console.log('✅ Successfully removed from queue');
+  
+  // Verify removal
+  const { data: remaining } = await supabase
+    .from('matchmaking_queue')
+    .select('user_id')
+    .eq('user_id', userId);
+    
+  if (remaining && remaining.length > 0) {
+    console.warn('⚠️ User still in queue after deletion attempt');
+  } else {
+    console.log('✅ Confirmed: User completely removed from queue');
+  }
 }
 
 /**
@@ -285,6 +298,8 @@ export async function processMatchmaking(): Promise<number> {
               leaveMatchmakingQueue(player2.user_id),
             ]);
 
+            console.log('🧹 Both players removed from queue after match creation');
+            
             processedUsers.add(player1.user_id);
             processedUsers.add(player2.user_id);
             matchesCreated++;
@@ -293,6 +308,7 @@ export async function processMatchmaking(): Promise<number> {
             console.log(`🚀 Players should navigate to: /duel/${duelId}`);
           } catch (error) {
             console.error('💥 Failed to create instant match:', error);
+            // If match creation fails, don't remove from queue
           }
         }
       }
@@ -330,6 +346,8 @@ export async function processMatchmaking(): Promise<number> {
               leaveMatchmakingQueue(opponent.user_id),
             ]);
 
+            console.log('🧹 Both players removed from queue after close match');
+            
             processedUsers.add(user.user_id);
             processedUsers.add(opponent.user_id);
             matchesCreated++;
@@ -382,6 +400,8 @@ export async function processMatchmaking(): Promise<number> {
                 leaveMatchmakingQueue(opponent.user_id),
               ]);
 
+              console.log('🧹 Both players removed from queue after wide match');
+              
               processedUsers.add(user.user_id);
               processedUsers.add(opponent.user_id);
               matchesCreated++;
