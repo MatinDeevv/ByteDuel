@@ -196,16 +196,39 @@ const LandingPage: React.FC = () => {
               
               {/* GitHub Profile Input (only for guests) */}
               {!user && (
-                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <AnimatedButton
-                    onClick={signInWithGitHub}
-                    variant="primary"
-                    size="sm"
-                    className="w-full bg-gray-900 hover:bg-gray-800 text-white"
-                  >
-                    <Github className="h-4 w-4 mr-2" />
-                    Sign in with GitHub to Play
-                  </AnimatedButton>
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                    Sign in to track your progress, compete in ranked matches, and unlock all features!
+                  </p>
+                  <div className="space-y-2">
+                    <AnimatedButton
+                      onClick={signInWithGitHub}
+                      variant="primary"
+                      size="sm"
+                      className="w-full bg-gray-900 hover:bg-gray-800 text-white"
+                    >
+                      <Github className="h-4 w-4 mr-2" />
+                      Continue with GitHub
+                    </AnimatedButton>
+                    <div className="flex space-x-2">
+                      <AnimatedButton
+                        onClick={() => navigate('/login')}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Sign In
+                      </AnimatedButton>
+                      <AnimatedButton
+                        onClick={() => navigate('/signup')}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Sign Up
+                      </AnimatedButton>
+                    </div>
+                  </div>
                 </div>
               )}
 

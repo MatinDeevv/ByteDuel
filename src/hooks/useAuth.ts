@@ -128,6 +128,8 @@ export function useAuth(): AuthState & AuthActions {
         throw error;
       }
 
+      // Trigger refetch to get profile
+      queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
       setError(null);
     } catch (error) {
       throw error;
@@ -153,6 +155,16 @@ export function useAuth(): AuthState & AuthActions {
         throw error;
       }
 
+      // For email signup, we need to wait for email confirmation
+      // But we can still create the profile if the user was created
+      if (data.user && !data.user.email_confirmed_at) {
+        // User needs to confirm email
+        setError('Please check your email and click the confirmation link to complete signup.');
+        return;
+      }
+
+      // Trigger refetch to get profile
+      queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
       setError(null);
     } catch (error) {
       throw error;
