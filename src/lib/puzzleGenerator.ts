@@ -42,6 +42,64 @@ export async function generatePuzzle(
   // Mock implementation for development - different puzzles based on mode
   const competitivePuzzles: GeneratedPuzzle[] = [
     {
+      prompt: `Write a function that checks if a string is a valid palindrome.
+
+A palindrome reads the same forward and backward. For this problem:
+- Ignore case (uppercase/lowercase)
+- Ignore spaces and punctuation
+- Only consider alphanumeric characters
+
+Examples:
+- "A man a plan a canal Panama" → true
+- "race a car" → false
+- "Was it a car or a cat I saw?" → true
+- "" → true (empty string is a palindrome)
+
+Function signature:
+function isPalindrome(s) {
+  // Your code here
+}`,
+      tests: [
+        { input: '"A man a plan a canal Panama"', expected: 'true' },
+        { input: '"race a car"', expected: 'false' },
+        { input: '"Was it a car or a cat I saw?"', expected: 'true' },
+        { input: '""', expected: 'true' },
+        { input: '"Madam"', expected: 'true' },
+        { input: '"No lemon, no melon"', expected: 'true' },
+        { input: '"hello"', expected: 'false' },
+      ],
+      difficulty: 'easy',
+      tags: ['strings', 'two-pointers', 'palindrome'],
+    },
+    {
+      prompt: `Find the maximum profit from buying and selling a stock.
+
+You are given an array of stock prices where prices[i] is the price on day i.
+You want to maximize profit by choosing a single day to buy and a different day in the future to sell.
+
+Return the maximum profit you can achieve. If no profit is possible, return 0.
+
+Examples:
+- [7,1,5,3,6,4] → 5 (buy at 1, sell at 6)
+- [7,6,4,3,1] → 0 (prices only decrease)
+- [1,2,3,4,5] → 4 (buy at 1, sell at 5)
+
+Function signature:
+function maxProfit(prices) {
+  // Your code here
+}`,
+      tests: [
+        { input: '[7,1,5,3,6,4]', expected: '5' },
+        { input: '[7,6,4,3,1]', expected: '0' },
+        { input: '[1,2,3,4,5]', expected: '4' },
+        { input: '[2,4,1]', expected: '2' },
+        { input: '[1]', expected: '0' },
+        { input: '[3,2,6,5,0,3]', expected: '4' },
+      ],
+      difficulty: 'easy',
+      tags: ['arrays', 'dynamic-programming', 'greedy'],
+    },
+    {
       prompt: `Write a function that finds the two numbers in an array that add up to a target sum.
 
 Given an array of integers and a target sum, return the indices of the two numbers that add up to the target.
