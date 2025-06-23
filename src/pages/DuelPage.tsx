@@ -35,6 +35,8 @@ const DuelPage: React.FC = () => {
   const [lastExecutionResult, setLastExecutionResult] = useState<ExecutionResult | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [ratingDelta, setRatingDelta] = useState<number | undefined>();
+  const [speedBonus, setSpeedBonus] = useState<number | undefined>();
+  const [performanceScore, setPerformanceScore] = useState<number | undefined>();
   const { user } = useAuth();
   const { userRating, setUserRating } = useMatchmakingStore();
   const { recordKeystroke } = useKeystrokeStore();
@@ -90,6 +92,8 @@ const DuelPage: React.FC = () => {
       // Handle rating changes for ranked duels
       if (result.deltaWinner !== undefined && result.newRatings) {
         setRatingDelta(result.deltaWinner);
+        setSpeedBonus(result.speedBonus);
+        setPerformanceScore(result.performanceScore);
         setUserRating(result.newRatings.winner);
       }
       
@@ -163,6 +167,20 @@ const DuelPage: React.FC = () => {
               showDelta={submitted && ratingDelta !== undefined}
               size="sm"
             />
+            
+            {/* Performance Indicators */}
+            {submitted && speedBonus !== undefined && speedBonus > 0 && (
+              <motion.div
+                className="flex items-center space-x-1 text-yellow-500"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5, type: "spring", stiffness: 500 }}
+              >
+                <Trophy className="h-4 w-4" />
+                <span className="text-sm font-bold">+{speedBonus}</span>
+              </motion.div>
+            )}
+            
             <ThemeToggle />
             
             {/* Submit Button */}

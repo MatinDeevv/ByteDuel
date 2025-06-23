@@ -22,6 +22,8 @@ export interface SubmitDuelResponse {
     winner: number;
     loser: number;
   };
+  speedBonus?: number;
+  performanceScore?: number;
 }
 
 export interface StartPracticeResponse {
@@ -116,11 +118,13 @@ export async function submitDuel(duelId: string, code: string): Promise<SubmitDu
       passed: true,
       passedTests: result.passedTests,
       totalTests: result.totalTests,
-      deltaWinner: 25,
+      deltaWinner: 25 + (result.speedBonus || 0),
       newRatings: {
-        winner: 1225,
+        winner: 1225 + (result.speedBonus || 0),
         loser: 1175,
       },
+      speedBonus: result.speedBonus,
+      performanceScore: result.performanceScore,
     };
   }
 
@@ -128,6 +132,8 @@ export async function submitDuel(duelId: string, code: string): Promise<SubmitDu
     passed: result.passed,
     passedTests: result.passedTests,
     totalTests: result.totalTests,
+    speedBonus: result.speedBonus,
+    performanceScore: result.performanceScore,
   };
 }
 

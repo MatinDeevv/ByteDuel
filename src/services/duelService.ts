@@ -5,6 +5,7 @@
 import { supabase, type Duel, type Submission, type Profile } from '../lib/supabaseClient';
 import { runCodeSandbox } from '../lib/sandboxRunner';
 import { generatePuzzle } from '../lib/puzzleGenerator';
+import { computeEnhancedDeltas, analyzeCodeQuality, type PerformanceMetrics } from '../lib/elo';
 
 export interface CreateDuelOptions {
   mode: 'ranked' | 'casual' | 'tournament' | 'practice';
@@ -25,6 +26,8 @@ export interface SubmissionResult {
   isWinner: boolean;
   ratingChange?: number;
   newRating?: number;
+  speedBonus?: number;
+  performanceScore?: number;
 }
 
 /**
@@ -212,6 +215,16 @@ export async function submitCode(
     const completionTime = Math.floor(result.runtimeMs / 1000);
     const isCreator = userId === duel.creator_id;
 
+    // Analyze code quality for ELO calculation
+    const codeQuality = analyzeCodeQuality(code);
+    
+    // Create performance metrics for enhanced ELO calculation
+    const performanceMetrics: PerformanceMetrics = {
+      executionTime: result.runtimeMs,
+      performanceScore: result.performanceScore || 75,
+      wrongSubmissions: attemptNumber - 1,
+      codeQuality,
+    };
     // Update duel with completion data
     const updateData = isCreator
       ? {
@@ -231,36 +244,57 @@ export async function submitCode(
 
     // Calculate ELO changes for ranked duels
     if (duel.mode === 'ranked' && duel.opponent_id) {
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('id, elo_rating')
+        .select('id, elo_rating, display_name')
         .in('id', [duel.creator_id, duel.opponent_id]);
 
-      if (profiles && profiles.length === 2) {
+      if (!profileError && profiles && profiles.length === 2) {
         const winner = profiles.find(p => p.id === userId)!;
         const loser = profiles.find(p => p.id !== userId)!;
 
-        // Calculate ELO changes using database function
-        const { data: eloChanges } = await supabase.rpc('calculate_elo_change', {
-          winner_rating: winner.elo_rating,
-          loser_rating: loser.elo_rating,
+        // Calculate enhanced ELO changes with performance bonuses
+        const eloResult = computeEnhancedDeltas(
+          winner.elo_rating,
+          loser.elo_rating,
+          performanceMetrics
+        );
+
+        ratingChange = eloResult.deltaWinner;
+        newRating = winner.elo_rating + ratingChange;
+        const loserRatingChange = eloResult.deltaLoser;
+        const loserNewRating = loser.elo_rating + loserRatingChange;
+
+        // Update player ratings in the database
+        await Promise.all([
+          supabase
+            .from('users')
+            .update({ elo_rating: newRating, rating: newRating })
+            .eq('id', userId),
+          supabase
+            .from('users')
+            .update({ elo_rating: loserNewRating, rating: loserNewRating })
+            .eq('id', loser.id)
+        ]);
+
+        // Update duel with rating changes
+        Object.assign(updateData, {
+          creator_rating_before: profiles.find(p => p.id === duel.creator_id)!.elo_rating,
+          opponent_rating_before: profiles.find(p => p.id === duel.opponent_id)!.elo_rating,
+          creator_rating_after: isCreator ? newRating : loserNewRating,
+          opponent_rating_after: isCreator ? loserNewRating : newRating,
+          creator_rating_change: isCreator ? ratingChange : loserRatingChange,
+          opponent_rating_change: isCreator ? loserRatingChange : ratingChange,
         });
 
-        if (eloChanges && eloChanges.length > 0) {
-          const changes = eloChanges[0];
-          ratingChange = changes.winner_change;
-          newRating = winner.elo_rating + ratingChange;
-
-          // Update duel with rating changes
-          Object.assign(updateData, {
-            creator_rating_before: profiles.find(p => p.id === duel.creator_id)!.elo_rating,
-            opponent_rating_before: profiles.find(p => p.id === duel.opponent_id)!.elo_rating,
-            creator_rating_after: isCreator ? newRating : loser.elo_rating + changes.loser_change,
-            opponent_rating_after: isCreator ? loser.elo_rating + changes.loser_change : newRating,
-            creator_rating_change: isCreator ? ratingChange : changes.loser_change,
-            opponent_rating_change: isCreator ? changes.loser_change : ratingChange,
-          });
-        }
+        console.log('🏆 ELO Changes Applied:', {
+          winner: winner.display_name,
+          winnerChange: `${winner.elo_rating} → ${newRating} (+${ratingChange})`,
+          loser: loser.display_name,
+          loserChange: `${loser.elo_rating} → ${loserNewRating} (${loserRatingChange})`,
+          speedBonus: eloResult.speedBonus,
+          performanceMultiplier: eloResult.performanceMultiplier,
+        });
       }
     }
 
@@ -277,7 +311,15 @@ export async function submitCode(
     }
 
     isWinner = true;
-    return { submission, duel: updatedDuel, isWinner, ratingChange, newRating };
+    return { 
+      submission, 
+      duel: updatedDuel, 
+      isWinner, 
+      ratingChange, 
+      newRating,
+      speedBonus: result.speedBonus,
+      performanceScore: result.performanceScore,
+    };
   }
 
   return { submission, duel, isWinner };
