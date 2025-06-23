@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Zap, Github, Code, Trophy, Users, BookOpen, Search, User, LogOut } from 'lucide-react';
+import { Zap, Github, Code, Trophy, Users, BookOpen, Search, User, LogOut, Play } from 'lucide-react';
 import AnimatedButton from '../components/AnimatedButton';
 import AnimatedCard from '../components/AnimatedCard';
 import ModeSelector from '../components/ModeSelector';
 import AnimatedLeaderboard from '../components/AnimatedLeaderboard';
-import MatchmakingModal from '../components/MatchmakingModal';
 import RatingDisplay from '../components/RatingDisplay';
 import ThemeToggle from '../components/ThemeToggle';
 import PageTransition from '../components/PageTransition';
@@ -15,10 +14,7 @@ import { GameMode } from '../types';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [isCreatingDuel, setIsCreatingDuel] = useState(false);
-  const [githubProfile, setGithubProfile] = useState('');
   const [selectedMode, setSelectedMode] = useState<GameMode>('ranked-duel');
-  const [showMatchmaking, setShowMatchmaking] = useState(false);
   const { user, profile, signOut, signInWithGitHub } = useAuth();
 
   // Mock leaderboard data
@@ -47,7 +43,7 @@ const LandingPage: React.FC = () => {
     if (selectedMode === 'practice') {
       navigate('/practice');
     } else if (selectedMode === 'ranked-duel') {
-      setShowMatchmaking(true);
+      navigate('/lobby'); // Navigate to new lobby page
     } else {
       // For other modes, redirect to dashboard for now
       navigate('/dashboard');
@@ -92,6 +88,14 @@ const LandingPage: React.FC = () => {
             <ThemeToggle />
             {user ? (
               <div className="flex items-center space-x-4">
+                <AnimatedButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/lobby')}
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Game Lobby
+                </AnimatedButton>
                 <AnimatedButton
                   variant="outline"
                   size="sm"
@@ -244,8 +248,8 @@ const LandingPage: React.FC = () => {
                   </>
                 ) : selectedMode === 'ranked-duel' ? (
                   <>
-                    <Search className="h-5 w-5 mr-2" />
-                    Find Ranked Match
+                    <Play className="h-5 w-5 mr-2" />
+                    Enter Game Lobby
                   </>
                 ) : (
                   <>
@@ -270,7 +274,7 @@ const LandingPage: React.FC = () => {
               { icon: Code, title: 'AI-Generated Challenges', desc: 'Fresh, fair coding problems tailored to your skill level', color: 'text-blue-500' },
               { icon: Trophy, title: 'Real-time Competition', desc: 'Live editor with timer and instant feedback', color: 'text-green-500' },
               { icon: BookOpen, title: 'Practice Mode', desc: 'Self-paced learning with hints and guidance', color: 'text-purple-500' },
-              { icon: Users, title: 'Viral Highlights', desc: 'Shareable code replay videos with AI commentary', color: 'text-pink-500' },
+              { icon: Users, title: 'Game Lobby', desc: 'Browse and join games hosted by players worldwide', color: 'text-pink-500' },
             ].map((feature, index) => (
               <motion.div 
                 key={feature.title}
@@ -303,12 +307,6 @@ const LandingPage: React.FC = () => {
           </motion.div>
         </div>
       </section>
-      
-      {/* Matchmaking Modal */}
-      <MatchmakingModal 
-        isOpen={showMatchmaking} 
-        onClose={() => setShowMatchmaking(false)} 
-      />
       </div>
     </PageTransition>
   );
