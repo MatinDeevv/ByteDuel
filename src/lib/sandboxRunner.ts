@@ -118,14 +118,39 @@ async function executeTestCase(
   context: Record<string, any>
 ): Promise<ExecutionResult['testResults'][0]> {
   try {
-    // Parse input (assuming JSON format for now)
-    const input = JSON.parse(`[${testCase.input}]`);
+    // Parse input - handle different formats
+    let input: any[];
+    try {
+      // Try parsing as array first
+      input = JSON.parse(`[${testCase.input}]`);
+    } catch {
+      // If that fails, try parsing as single value
+      try {
+        input = [JSON.parse(testCase.input)];
+      } catch {
+        // If all else fails, treat as string
+        input = [testCase.input];
+      }
+    }
+    
     const expected = testCase.expected;
     
     // Create function wrapper with timeout
     const wrappedCode = `
-      const userFunction = ${code};
-      return userFunction(...arguments);
+      ${code}
+      
+      // Try to find the main function to call
+      if (typeof isPalindrome !== 'undefined') {
+        return isPalindrome(...arguments);
+      } else if (typeof maxProfit !== 'undefined') {
+        return maxProfit(...arguments);
+      } else if (typeof twoSum !== 'undefined') {
+        return twoSum(...arguments);
+      } else if (typeof solve !== 'undefined') {
+        return solve(...arguments);
+      } else {
+        throw new Error('No recognized function found. Please define isPalindrome, maxProfit, twoSum, or solve.');
+      }
     `;
     
     // Execute with timeout (5 seconds max)

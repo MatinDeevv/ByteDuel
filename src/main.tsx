@@ -14,6 +14,9 @@ import ProfilePage from './pages/ProfilePage.tsx';
 import RequireAuth from './components/RequireAuth.tsx';
 import './index.css';
 
+// Start background matchmaker
+import './services/backgroundMatchmaker';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryProvider>

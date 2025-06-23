@@ -16,6 +16,8 @@ const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onClose }) 
   const {
     isSearching,
     queuedAt,
+    queuePosition,
+    estimatedWaitTime,
     currentMatch,
     userRating,
     startSearch,
@@ -152,21 +154,40 @@ const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onClose }) 
           {/* Searching State */}
           {isSearching && !currentMatch && (
             <div className="text-center mb-6">
-              <motion.div
-                className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              />
+              <div className="relative mb-4">
+                <motion.div
+                  className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+                {queuePosition && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-bold text-blue-500">#{queuePosition}</span>
+                  </div>
+                )}
+              </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                Finding Opponent...
+                {queuePosition ? `Position #${queuePosition} in Queue` : 'Finding Opponent...'}
               </h3>
               <div className="flex items-center justify-center space-x-2 text-gray-600 dark:text-gray-400 mb-4">
                 <Clock className="h-4 w-4" />
-                <span>{formatTime(searchTime)}</span>
+                <span>
+                  {estimatedWaitTime 
+                    ? `~${Math.ceil(estimatedWaitTime / 60)} min wait` 
+                    : formatTime(searchTime)
+                  }
+                </span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                Looking for players with similar skill level
-              </p>
+              <div className="space-y-2 mb-6">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Looking for players with similar skill level
+                </p>
+                {queuePosition && queuePosition > 1 && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    {queuePosition - 1} player{queuePosition > 2 ? 's' : ''} ahead of you
+                  </p>
+                )}
+              </div>
               <AnimatedButton
                 onClick={handleCancelSearch}
                 variant="outline"
@@ -213,7 +234,7 @@ const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onClose }) 
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
               <span>Average wait time</span>
-              <span>~30 seconds</span>
+              <span>~1-2 minutes</span>
             </div>
           </div>
         </motion.div>
